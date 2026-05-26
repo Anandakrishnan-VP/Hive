@@ -75,7 +75,7 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
                   </SyntaxHighlighter>
                 </div>
               ) : (
-                <code className="bg-slate-900 border border-slate-800 text-indigo-400 px-1.5 py-0.5 rounded font-mono text-xs" {...props}>
+                <code className="bg-slate-900 border border-slate-800 text-kiwi px-1.5 py-0.5 rounded font-mono text-xs" {...props}>
                   {children}
                 </code>
               );
@@ -88,7 +88,7 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
             li: ({ children }) => <li className="text-slate-300">{children}</li>,
             p: ({ children }) => <p className="mb-4 text-slate-300">{children}</p>,
             blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-indigo-500 pl-4 py-1 italic bg-indigo-950/20 text-slate-400 my-4 rounded-r">
+              <blockquote className="border-l-4 border-kiwi pl-4 py-1 italic bg-kiwi/15 text-slate-400 my-4 rounded-r">
                 {children}
               </blockquote>
             ),
