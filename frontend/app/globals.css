@@ -5,6 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-kiwi: #90f13b;
+  --color-tangy: #f1e53b;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -90,13 +92,13 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  --primary: #90f13b;
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --accent: #f1e53b;
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
@@ -109,7 +111,7 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary: #90f13b;
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
@@ -132,8 +134,8 @@
 @layer utilities {
   .hud-grid {
     background-image: 
-      linear-gradient(to right, rgba(99, 102, 241, 0.03) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+      linear-gradient(to right, rgba(144, 241, 59, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(144, 241, 59, 0.02) 1px, transparent 1px);
     background-size: 30px 30px;
   }
   
@@ -145,19 +147,23 @@
     display: block;
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(99, 102, 241, 0.03), rgba(168, 85, 247, 0.01), rgba(99, 102, 241, 0.03));
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(144, 241, 59, 0.02), rgba(241, 229, 59, 0.01), rgba(144, 241, 59, 0.02));
     background-size: 100% 4px, 6px 100%;
     z-index: 10;
     pointer-events: none;
     opacity: 0.85;
   }
   
-  .glow-text-indigo {
-    text-shadow: 0 0 10px rgba(99, 102, 241, 0.4), 0 0 20px rgba(99, 102, 241, 0.2);
+  .glow-text-kiwi {
+    text-shadow: 0 0 10px rgba(144, 241, 59, 0.4), 0 0 20px rgba(144, 241, 59, 0.2);
   }
   
-  .glow-border-indigo {
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.1), inset 0 0 15px rgba(99, 102, 241, 0.05);
+  .glow-text-tangy {
+    text-shadow: 0 0 10px rgba(241, 229, 59, 0.4), 0 0 20px rgba(241, 229, 59, 0.2);
+  }
+  
+  .glow-border-kiwi {
+    box-shadow: 0 0 15px rgba(144, 241, 59, 0.15), inset 0 0 15px rgba(144, 241, 59, 0.08);
   }
 }
 

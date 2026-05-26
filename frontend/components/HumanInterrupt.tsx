@@ -56,7 +56,7 @@ export function HumanInterrupt({ runId, status, onInterrupted }: HumanInterruptP
   return (
     <div className="border border-slate-800 rounded-xl bg-slate-950/80 p-5 shadow-2xl backdrop-blur-md">
       <div className="flex items-center gap-2 mb-3.5">
-        <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-400">
+        <div className="p-1.5 bg-kiwi/15 rounded-lg text-kiwi">
           <MessageSquareCode className="w-4 h-4" />
         </div>
         <div>
@@ -75,12 +75,12 @@ export function HumanInterrupt({ runId, status, onInterrupted }: HumanInterruptP
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
           disabled={!isEnabled || loading}
-          className="min-h-[70px] bg-slate-900 border-slate-800 text-xs text-slate-300 placeholder:text-slate-600 focus-visible:ring-indigo-600"
+          className="min-h-[70px] bg-slate-900 border-slate-800 text-xs text-slate-300 placeholder:text-slate-600 focus-visible:ring-kiwi"
         />
         <Button
           type="submit"
           disabled={!isEnabled || !instruction.trim() || loading}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-indigo-600/15"
+          className="w-full bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-kiwi/15"
         >
           <Sparkles className="w-3.5 h-3.5" />
           {loading ? "Injecting steer..." : "Steer Agent"}

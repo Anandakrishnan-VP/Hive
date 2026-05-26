@@ -67,7 +67,7 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
       (currentAgent === fromNodeId && status === "running") ||
       (currentAgent === toNodeId && status === "running");
     return {
-      stroke: isFlowing ? "var(--color-primary-glow, #6366f1)" : "#374151",
+      stroke: isFlowing ? "#90f13b" : "#374151",
       strokeWidth: isFlowing ? 2.5 : 1.5,
       strokeDasharray: isFlowing ? "5, 5" : "none",
       className: isFlowing ? "animate-[dash_1s_linear_infinite]" : "",
@@ -80,8 +80,8 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
       <svg className="absolute inset-0 w-full h-full pointer-events-none">
         <defs>
           <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+            <stop offset="0%" stopColor="#90f13b" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#90f13b" stopOpacity="0" />
           </radialGradient>
           <style>{`
             @keyframes dash {
@@ -120,14 +120,14 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
         >
           {/* Node Glow Circle for Active State */}
           {node.active && (
-            <div className="absolute w-24 h-24 rounded-full bg-indigo-500/10 blur-xl animate-pulse" />
+            <div className="absolute w-24 h-24 rounded-full bg-kiwi/15 blur-xl animate-pulse" />
           )}
 
           {/* Node Circle */}
           <div
             className={`w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-lg transition-all duration-300 ${
               node.active
-                ? "bg-indigo-600/90 border-indigo-400 text-white scale-110 shadow-indigo-500/30"
+                ? "bg-kiwi border-tangy text-slate-950 scale-110 shadow-kiwi/30"
                 : "bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500"
             }`}
           >
@@ -142,7 +142,7 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
           <span
             className={`mt-2 text-xs font-semibold px-2 py-0.5 rounded transition-all duration-300 ${
               node.active
-                ? "text-indigo-400 bg-indigo-950/50 border border-indigo-800/50"
+                ? "text-kiwi bg-kiwi/5 border border-kiwi/20"
                 : "text-slate-400"
             }`}
           >
@@ -157,9 +157,9 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
           <span
             className={`w-2 h-2 rounded-full ${
               status === "running"
-                ? "bg-blue-500 animate-ping"
+                ? "bg-kiwi animate-ping"
                 : status === "complete"
-                ? "bg-emerald-500"
+                ? "bg-kiwi"
                 : status === "error"
                 ? "bg-rose-500"
                 : "bg-slate-500"
@@ -168,7 +168,7 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
           <span className="capitalize font-mono">{status}</span>
         </div>
         <div className="font-mono">
-          Active: <span className="text-indigo-400 font-semibold">{currentAgent || "None"}</span>
+          Active: <span className="text-kiwi font-semibold">{currentAgent || "None"}</span>
         </div>
       </div>
     </div>

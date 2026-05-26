@@ -78,7 +78,7 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
               <span className="font-semibold underline tracking-widest">{toolName}</span>
             </div>
             {event.data?.args?.code && (
-              <pre className="mt-0.5 bg-slate-950 p-3 rounded-lg border border-slate-900 text-xs text-indigo-300 font-mono overflow-x-auto max-h-48 shadow-inner">
+              <pre className="mt-0.5 bg-slate-950 p-3 rounded-lg border border-slate-900 text-xs text-kiwi/90 font-mono overflow-x-auto max-h-48 shadow-inner">
                 <code>{event.data.args.code}</code>
               </pre>
             )}
@@ -181,8 +181,8 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
           <span className="ml-2.5 text-xs text-slate-400 font-semibold font-mono tracking-wider">hive-core@terminal:~</span>
         </div>
-        <div className="text-[9px] text-indigo-400 font-mono font-bold tracking-widest flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
+        <div className="text-[9px] text-kiwi font-mono font-bold tracking-widest flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-kiwi animate-ping" />
           STREAMING DATA
         </div>
       </div>

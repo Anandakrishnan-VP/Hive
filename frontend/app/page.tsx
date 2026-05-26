@@ -292,18 +292,18 @@ export default function MainPage() {
         <div className="absolute inset-0 hud-grid opacity-15" />
         
         {/* Glow sweeps */}
-        <div className="absolute w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[120px]" />
+        <div className="absolute w-[600px] h-[600px] bg-kiwi/5 rounded-full blur-[120px]" />
         
         {/* Centered Honeycomb Hexagon Structure */}
         <div className="relative mb-12 flex flex-col items-center">
           
           {/* Animated concentric loader vectors */}
-          <div className="absolute w-44 h-44 rounded-full border border-indigo-500/20 border-dashed animate-[spin_10s_linear_infinite]" />
-          <div className="absolute w-36 h-36 rounded-full border border-indigo-400/10 animate-[spin_5s_linear_infinite_reverse]" />
+          <div className="absolute w-44 h-44 rounded-full border border-kiwi/20 border-dashed animate-[spin_10s_linear_infinite]" />
+          <div className="absolute w-36 h-36 rounded-full border border-kiwi/10 animate-[spin_5s_linear_infinite_reverse]" />
           
           {/* Hexagonal Hive Logo (SVG) */}
           <div className="w-24 h-24 flex items-center justify-center relative z-10 animate-pulse">
-            <svg viewBox="0 0 100 100" className="w-full h-full text-indigo-400 filter drop-shadow-[0_0_12px_rgba(99,102,241,0.5)]">
+            <svg viewBox="0 0 100 100" className="w-full h-full text-kiwi filter drop-shadow-[0_0_12px_rgba(144,241,59,0.5)]">
               {/* Outer hexagonal shell */}
               <polygon 
                 points="50,5 90,27 90,73 50,95 10,73 10,27" 
@@ -339,11 +339,11 @@ export default function MainPage() {
 
         {/* Digital HUD Counters & Telemetry Logs */}
         <div className="w-[450px] font-mono text-center relative z-10">
-          <div className="flex items-center justify-between mb-2.5 px-1 border-b border-indigo-500/10 pb-1">
-            <span className="text-[10px] tracking-widest text-indigo-400 uppercase font-bold flex items-center gap-1.5 animate-pulse">
-              <Radio className="w-3.5 h-3.5 animate-pulse" /> Core System Booting
+          <div className="flex items-center justify-between mb-2.5 px-1 border-b border-kiwi/15 pb-1">
+            <span className="text-[10px] tracking-widest text-kiwi uppercase font-bold flex items-center gap-1.5 animate-pulse">
+              <Radio className="w-3.5 h-3.5 animate-pulse text-kiwi" /> Core System Booting
             </span>
-            <span className="text-xs text-indigo-400 font-bold glow-text-indigo">
+            <span className="text-xs text-tangy font-bold glow-text-tangy">
               {bootProgress.toString().padStart(3, "0")}%
             </span>
           </div>
@@ -352,7 +352,7 @@ export default function MainPage() {
           <div className="h-28 bg-slate-950/80 border border-slate-900 rounded-lg p-3 text-left overflow-hidden flex flex-col justify-end gap-1 select-none backdrop-blur-md">
             {bootLogs.slice(-4).map((log, idx) => (
               <div key={idx} className="text-[10px] text-slate-500 flex items-center gap-1">
-                <ChevronRight className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+                <ChevronRight className="w-3 h-3 text-kiwi flex-shrink-0" />
                 <span className="truncate">{log}</span>
               </div>
             ))}
@@ -375,7 +375,7 @@ export default function MainPage() {
       <div className="absolute inset-0 hud-grid opacity-10 pointer-events-none" />
       
       {/* Visual scanning line */}
-      <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-indigo-500/5 to-transparent animate-sweep-bar pointer-events-none z-10" />
+      <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-kiwi/5 to-transparent animate-sweep-bar pointer-events-none z-10" />
 
       {/* 1. Sidebar - Run History */}
       <aside className="w-80 border-r border-slate-900 bg-slate-950 flex flex-col h-full flex-shrink-0 relative z-20">
@@ -386,7 +386,7 @@ export default function MainPage() {
         {/* Sidebar Header */}
         <div className="p-4 border-b border-slate-900 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-indigo-600/10 rounded-xl text-indigo-400 border border-indigo-500/20 shadow-lg shadow-indigo-600/5">
+            <div className="p-2 bg-kiwi/10 rounded-xl text-kiwi border border-kiwi/20 shadow-lg shadow-kiwi/5">
               <Layers className="w-5 h-5" />
             </div>
             <div>
@@ -394,7 +394,7 @@ export default function MainPage() {
                 <ScrambledText text="HIVE CONSOLE" />
               </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${backendHealth === "online" ? "bg-emerald-500" : backendHealth === "checking" ? "bg-amber-500" : "bg-rose-500"}`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${backendHealth === "online" ? "bg-kiwi animate-pulse" : backendHealth === "checking" ? "bg-amber-500" : "bg-rose-500"}`} />
                 <span className="text-[9px] text-slate-500 capitalize font-mono">{backendHealth === "online" ? "port 8000 online" : backendHealth === "checking" ? "resolving..." : "offline"}</span>
               </div>
             </div>
@@ -448,27 +448,27 @@ export default function MainPage() {
                   onMouseEnter={handleHoverSound}
                   className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1.5 mb-2 relative overflow-hidden group ${
                     isSelected
-                      ? "bg-slate-900/80 border-indigo-500/50 shadow-lg shadow-indigo-600/5"
+                      ? "bg-slate-900/80 border-kiwi/40 shadow-lg shadow-kiwi/5"
                       : "bg-slate-950/50 border-slate-900 hover:bg-slate-900/30 hover:border-slate-800"
                   }`}
                 >
                   {/* Glowing vertical slider on selected */}
                   {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-indigo-500" />
+                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-kiwi" />
                   )}
                   
                   <div className="flex items-start justify-between gap-2">
-                    <span className={`text-[11px] font-mono font-bold truncate ${isSelected ? "text-indigo-400" : "text-slate-300"}`}>
+                    <span className={`text-[11px] font-mono font-bold truncate ${isSelected ? "text-kiwi" : "text-slate-300"}`}>
                       {run.task}
                     </span>
                     <Badge
                       variant="outline"
                       className={`text-[8px] px-1.5 py-0 font-mono capitalize border-0 ${
                         run.status === "complete"
-                          ? "text-emerald-400 bg-emerald-950/20"
+                          ? "text-kiwi bg-kiwi/10"
                           : run.status === "error"
                           ? "text-rose-400 bg-rose-950/20"
-                          : "text-blue-400 bg-blue-950/20 animate-pulse"
+                          : "text-tangy bg-tangy/10 animate-pulse"
                       }`}
                     >
                       {run.status}
@@ -497,7 +497,7 @@ export default function MainPage() {
           <span className="absolute bottom-[-5px] right-[-5px] text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
 
           <div className="flex items-center gap-3">
-            <Cpu className="w-5 h-5 text-indigo-500 filter drop-shadow-[0_0_8px_rgba(99,102,241,0.3)]" />
+            <Cpu className="w-5 h-5 text-kiwi filter drop-shadow-[0_0_8px_rgba(144,241,59,0.3)]" />
             <div>
               <h2 className="text-xs font-bold text-white tracking-widest uppercase font-mono">
                 <ScrambledText text="MUTLI-AGENT ORCHESTRATOR HUD" delay={400} />
@@ -514,7 +514,7 @@ export default function MainPage() {
               variant="outline"
               onClick={handleToggleSound}
               onMouseEnter={handleHoverSound}
-              className={`w-8 h-8 rounded-lg border-slate-800 hover:bg-slate-900 ${soundEnabled ? "text-indigo-400 border-indigo-900/30" : "text-slate-500"}`}
+              className={`w-8 h-8 rounded-lg border-slate-800 hover:bg-slate-900 ${soundEnabled ? "text-kiwi border-kiwi/20" : "text-slate-500"}`}
               title={soundEnabled ? "Mute audio" : "Unmute audio"}
             >
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -532,7 +532,7 @@ export default function MainPage() {
                     rel="noreferrer"
                     onMouseEnter={handleHoverSound}
                     onClick={handleClickSound}
-                    className="text-[9px] text-indigo-400 hover:text-indigo-300 font-mono uppercase tracking-wider font-semibold flex items-center gap-1.5 bg-indigo-950/20 border border-indigo-900/50 px-2 py-0.5 rounded transition"
+                    className="text-[9px] text-tangy hover:text-tangy/80 font-mono uppercase tracking-wider font-semibold flex items-center gap-1.5 bg-tangy/10 border border-tangy/30 px-2 py-0.5 rounded transition"
                   >
                     <Server className="w-3. h-3" /> LangSmith Trace
                   </a>
@@ -547,14 +547,14 @@ export default function MainPage() {
           
           {/* A. Task Entry Area (Show only if no active/selected run) */}
           {!selectedRunId && (
-            <Card className="border-slate-900 bg-slate-950/40 shadow-2xl relative overflow-hidden backdrop-blur-md glow-border-indigo">
-              <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent" />
+            <Card className="border-slate-900 bg-slate-950/40 shadow-2xl relative overflow-hidden backdrop-blur-md glow-border-kiwi">
+              <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-kiwi/40 to-transparent" />
               
               {/* Coordinate tag */}
               <span className="absolute top-1 right-2 text-[8px] text-slate-700 font-mono">PANEL_SYS.BOOT</span>
               
               <CardHeader>
-                <CardTitle className="text-xs font-mono text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                <CardTitle className="text-xs font-mono text-kiwi uppercase tracking-widest flex items-center gap-2">
                   <Crosshair className="w-4 h-4" /> <ScrambledText text="EXECUTE NEW DEPLOYMENT" delay={200} />
                 </CardTitle>
                 <CardDescription className="text-[10px] text-slate-500 font-mono uppercase">
@@ -568,18 +568,18 @@ export default function MainPage() {
                     value={taskInput}
                     onChange={(e) => setTaskInput(e.target.value)}
                     required
-                    className="min-h-[110px] bg-slate-900 border-slate-800 text-xs font-mono text-slate-300 placeholder:text-slate-600 focus-visible:ring-indigo-600 rounded-xl"
+                    className="min-h-[110px] bg-slate-900 border-slate-800 text-xs font-mono text-slate-300 placeholder:text-slate-600 focus-visible:ring-kiwi rounded-xl"
                   />
                 </CardContent>
                 <CardFooter className="flex justify-between border-t border-slate-900/60 pt-4 bg-slate-950/30">
                   <div className="text-[9px] text-slate-500 flex items-center gap-1.5 font-mono">
-                    <Lock className="w-3.5 h-3.5 text-indigo-500" /> SECURED INTEGRATION: GEMINI 2.5 + TAVILY + E2B SANDBOX
+                    <Lock className="w-3.5 h-3.5 text-kiwi" /> SECURED INTEGRATION: GEMINI 2.5 + TAVILY + E2B SANDBOX
                   </div>
                   <Button
                     type="submit"
                     onMouseEnter={handleHoverSound}
                     disabled={!taskInput.trim() || isSubmitting || backendHealth !== "online"}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[10px] tracking-widest uppercase py-2 px-5 rounded-lg flex items-center gap-1.5 transition shadow-lg shadow-indigo-600/15"
+                    className="bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold font-mono text-[10px] tracking-widest uppercase py-2 px-5 rounded-lg flex items-center gap-1.5 transition shadow-lg shadow-kiwi/15"
                   >
                     DEPLOY CORE
                   </Button>
@@ -623,7 +623,7 @@ export default function MainPage() {
                     onMouseEnter={handleHoverSound}
                     className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${
                       activeTab === "terminal"
-                        ? "text-indigo-400 border-indigo-500"
+                        ? "text-kiwi border-kiwi"
                         : "text-slate-500 border-transparent hover:text-slate-400"
                     }`}
                   >
@@ -634,7 +634,7 @@ export default function MainPage() {
                     onMouseEnter={handleHoverSound}
                     className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${
                       activeTab === "draft"
-                        ? "text-indigo-400 border-indigo-500"
+                        ? "text-kiwi border-kiwi"
                         : "text-slate-500 border-transparent hover:text-slate-400"
                     }`}
                   >
