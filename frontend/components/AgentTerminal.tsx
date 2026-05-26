@@ -34,11 +34,11 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
 
   const getAgentBadge = (agent: string) => {
     const config: Record<string, { label: string; style: string }> = {
-      supervisor: { label: "🤖 SUPERVISOR", style: "bg-purple-950/60 border-purple-500/20 text-purple-400" },
-      researcher: { label: "🔍 RESEARCHER", style: "bg-amber-950/60 border-amber-500/20 text-amber-400" },
-      coder: { label: "💻 CODER", style: "bg-blue-950/60 border-blue-500/20 text-blue-400" },
-      writer: { label: "✍️ WRITER", style: "bg-emerald-950/60 border-emerald-500/20 text-emerald-400" },
-      critic: { label: "⚖️ CRITIC", style: "bg-rose-950/60 border-rose-500/20 text-rose-400" },
+      supervisor: { label: "🤖 SUPERVISOR", style: "bg-kiwi/10 border-kiwi/25 text-kiwi" },
+      researcher: { label: "🔍 RESEARCHER", style: "bg-tangy/10 border-tangy/25 text-tangy" },
+      coder: { label: "💻 CODER", style: "bg-limeaccent/10 border-limeaccent/25 text-limeaccent" },
+      writer: { label: "✍️ WRITER", style: "bg-kiwi/20 border-kiwi/40 text-kiwi" },
+      critic: { label: "⚖️ CRITIC", style: "bg-tangy/20 border-tangy/40 text-tangy" },
     };
     const matched = config[agent.toLowerCase()] || { label: agent.toUpperCase(), style: "bg-slate-900 border-slate-700 text-slate-300" };
     return (
@@ -78,12 +78,12 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
               <span className="font-semibold underline tracking-widest">{toolName}</span>
             </div>
             {event.data?.args?.code && (
-              <pre className="mt-0.5 bg-slate-950 p-3 rounded-lg border border-slate-900 text-xs text-kiwi/90 font-mono overflow-x-auto max-h-48 shadow-inner">
+              <pre className="mt-0.5 bg-black p-3 rounded-lg border border-slate-900 text-xs text-kiwi/90 font-mono overflow-x-auto max-h-48 shadow-inner">
                 <code>{event.data.args.code}</code>
               </pre>
             )}
             {!event.data?.args?.code && Object.keys(event.data?.args || {}).length > 0 && (
-              <pre className="mt-0.5 bg-slate-950/50 p-2 rounded-lg text-[10px] text-slate-500 font-mono border border-slate-900">
+              <pre className="mt-0.5 bg-black/50 p-2 rounded-lg text-[10px] text-slate-500 font-mono border border-slate-900">
                 {argsStr}
               </pre>
             )}
@@ -113,7 +113,7 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
             <pre className={`mt-0.5 p-3 rounded-lg border text-xs font-mono overflow-x-auto max-h-48 shadow-inner whitespace-pre-wrap ${
               isError 
                 ? "bg-rose-950/5 border-rose-900/30 text-rose-300" 
-                : "bg-slate-950 border-slate-900 text-emerald-300/90"
+                : "bg-black border-slate-900 text-emerald-300/90"
             }`}>
               {truncatedResult}
             </pre>
@@ -170,8 +170,7 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
   };
 
   return (
-    <div className="flex flex-col h-[460px] bg-slate-950 border border-slate-900 rounded-xl overflow-hidden shadow-2xl relative">
-      <div className="absolute top-0 right-12 text-[8px] text-slate-800 font-mono pointer-events-none select-none">PORT_STR.v2.5</div>
+    <div className="flex flex-col h-[460px] bg-black border border-kiwi/15 rounded-xl overflow-hidden shadow-2xl relative">
       
       {/* Terminal Title Bar */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-900 select-none">

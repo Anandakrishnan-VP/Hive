@@ -2,17 +2,17 @@ import json
 from backend.agents.state import AgentState
 from backend.config import settings
 from backend.tools.search import web_search
-from langchain_google_genai import ChatGoogleGenerativeAI
+from backend.llm import get_llm
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 
 def researcher(state: AgentState) -> dict:
     """Researcher agent that searches the web to answer research queries and updates state."""
     # Ensure API Key exists
-    if not settings.GOOGLE_API_KEY:
-        error_msg = "GOOGLE_API_KEY is not set. Cannot run researcher."
+    if not settings.GROQ_API_KEY:
+        error_msg = "GROQ_API_KEY is not set. Cannot run researcher."
         agent_outputs = dict(state.get("agent_outputs", {}))
         agent_outputs["researcher"] = json.dumps({
-            "findings": ["Error: Google API key missing"],
+            "findings": ["Error: Groq API key missing"],
             "sources": [],
             "confidence": 0.0
         })
@@ -24,12 +24,8 @@ def researcher(state: AgentState) -> dict:
             "step_count": state.get("step_count", 0) + 1
         }
 
-    # Initialize the Gemini model
-    llm = ChatGoogleGenerativeAI(
-        model=settings.MODEL_NAME,
-        google_api_key=settings.GOOGLE_API_KEY,
-        temperature=0.2
-    )
+    # Initialize model dynamically
+    llm = get_llm(temperature=0.2)
     
     # Bind the web search tool to the model
     llm_with_tools = llm.bind_tools([web_search])

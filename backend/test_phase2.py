@@ -6,7 +6,7 @@ from backend.graph.builder import graph
 def main():
     print("--- Phase 2: Full Multi-Agent Graph Test ---")
     print(f"Model Name: {settings.MODEL_NAME}")
-    print(f"Google API Key status: {'Set' if settings.GOOGLE_API_KEY else 'Not Set'}")
+    print(f"Groq API Key status: {'Set' if settings.GROQ_API_KEY else 'Not Set'}")
     print(f"Tavily API Key status: {'Set' if settings.TAVILY_API_KEY else 'Not Set'}")
     print(f"E2B API Key status: {'Set' if settings.E2B_API_KEY else 'Not Set'}")
     

@@ -10,8 +10,8 @@ if os.path.exists(load_dotenv_path):
 
 class Settings(BaseSettings):
     # LLM configuration
-    GOOGLE_API_KEY: Optional[str] = None
-    MODEL_NAME: str = "gemini-2.0-flash"
+    GROQ_API_KEY: Optional[str] = None
+    MODEL_NAME: str = "llama-3.3-70b-versatile"
     
     # Tool keys
     TAVILY_API_KEY: Optional[str] = None

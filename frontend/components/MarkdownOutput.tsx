@@ -22,7 +22,7 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
 
   if (!content) {
     return (
-      <div className="flex flex-col items-center justify-center h-[400px] border border-dashed border-slate-800 rounded-xl bg-slate-950/20 text-slate-500 font-sans">
+      <div className="flex flex-col items-center justify-center h-[400px] border border-dashed border-slate-800 rounded-xl bg-black/20 text-slate-500 font-sans">
         <p className="text-sm">No report draft has been generated yet.</p>
         <p className="text-xs text-slate-600 mt-1">Once the Writer agent completes its step, the output will appear here.</p>
       </div>
@@ -30,13 +30,13 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
   }
 
   return (
-    <div className="relative border border-slate-800 rounded-xl bg-slate-950/80 shadow-2xl overflow-hidden flex flex-col h-[500px]">
+    <div className="relative border border-slate-800 rounded-xl bg-black/80 shadow-2xl overflow-hidden flex flex-col h-[500px]">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 select-none">
         <span className="text-xs text-slate-400 font-semibold font-mono">REPORT DRAFT PREVIEW (.md)</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-400 hover:text-white bg-slate-950 border border-slate-800 hover:border-slate-700 rounded transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-400 hover:text-white bg-black border border-slate-800 hover:border-slate-700 rounded transition-all"
         >
           {copied ? (
             <>
@@ -68,7 +68,7 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
                     style={vscDarkPlus as any}
                     language={match[1]}
                     PreTag="div"
-                    customStyle={{ margin: 0, padding: "12px", background: "#020617" }}
+                    customStyle={{ margin: 0, padding: "12px", background: "#000000" }}
                     {...props}
                   >
                     {String(children).replace(/\n$/, "")}
@@ -98,7 +98,7 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
               </div>
             ),
             thead: ({ children }) => <thead className="bg-slate-900">{children}</thead>,
-            tbody: ({ children }) => <tbody className="divide-y divide-slate-800 bg-slate-950/40">{children}</tbody>,
+            tbody: ({ children }) => <tbody className="divide-y divide-slate-800 bg-black/40">{children}</tbody>,
             tr: ({ children }) => <tr>{children}</tr>,
             th: ({ children }) => <th className="px-4 py-2 text-left font-semibold text-slate-300">{children}</th>,
             td: ({ children }) => <td className="px-4 py-2 text-slate-400">{children}</td>,

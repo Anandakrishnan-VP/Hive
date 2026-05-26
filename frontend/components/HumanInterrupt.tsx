@@ -54,7 +54,7 @@ export function HumanInterrupt({ runId, status, onInterrupted }: HumanInterruptP
   const isEnabled = status === "running" && !!runId;
 
   return (
-    <div className="border border-slate-800 rounded-xl bg-slate-950/80 p-5 shadow-2xl backdrop-blur-md">
+    <div className="border border-slate-800 rounded-xl bg-black/80 p-5 shadow-2xl backdrop-blur-md">
       <div className="flex items-center gap-2 mb-3.5">
         <div className="p-1.5 bg-kiwi/15 rounded-lg text-kiwi">
           <MessageSquareCode className="w-4 h-4" />

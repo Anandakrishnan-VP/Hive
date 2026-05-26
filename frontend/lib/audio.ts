@@ -26,10 +26,39 @@ function getAudioContext(): AudioContext | null {
   
   // Resume context if suspended (browser security policy check)
   if (audioCtx && audioCtx.state === "suspended") {
-    audioCtx.resume();
+    audioCtx.resume().catch((err) => {
+      console.warn("Autoplay check: AudioContext resume deferred until next gesture.", err);
+    });
   }
   
   return audioCtx;
+}
+
+// Global user interaction listener to wake up AudioContext on the first gesture
+if (typeof window !== "undefined") {
+  const resumeAudio = () => {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().then(() => {
+        if (ctx.state === "running") {
+          cleanUp();
+        }
+      }).catch(() => {});
+    } else if (ctx && ctx.state === "running") {
+      cleanUp();
+    }
+  };
+
+  const gestureEvents = ["click", "mousedown", "keydown", "touchstart"];
+  const cleanUp = () => {
+    gestureEvents.forEach((evt) => {
+      window.removeEventListener(evt, resumeAudio);
+    });
+  };
+
+  gestureEvents.forEach((evt) => {
+    window.addEventListener(evt, resumeAudio, { passive: true });
+  });
 }
 
 export const audioManager = {

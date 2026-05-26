@@ -2,32 +2,28 @@ import json
 from backend.agents.state import AgentState
 from backend.config import settings
 from backend.tools.code_exec import execute_python
-from langchain_google_genai import ChatGoogleGenerativeAI
+from backend.llm import get_llm
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 
 def coder(state: AgentState) -> dict:
     """Coder agent that writes and executes Python code inside E2B sandbox to complete the task."""
-    if not settings.GOOGLE_API_KEY:
+    if not settings.GROQ_API_KEY:
         agent_outputs = dict(state.get("agent_outputs", {}))
         agent_outputs["coder"] = json.dumps({
             "code": "",
-            "output": "Error: Google API key missing",
+            "output": "Error: Groq API key missing",
             "explanation": "Cannot run coder."
         })
         error_log = list(state.get("error_log", []))
-        error_log.append("GOOGLE_API_KEY missing in coder.")
+        error_log.append("GROQ_API_KEY is missing in coder.")
         return {
             "agent_outputs": agent_outputs,
             "error_log": error_log,
             "step_count": state.get("step_count", 0) + 1
         }
 
-    # Initialize Gemini model
-    llm = ChatGoogleGenerativeAI(
-        model=settings.MODEL_NAME,
-        google_api_key=settings.GOOGLE_API_KEY,
-        temperature=0.2
-    )
+    # Initialize model dynamically
+    llm = get_llm(temperature=0.2)
     
     # Bind execute_python tool
     llm_with_tools = llm.bind_tools([execute_python])

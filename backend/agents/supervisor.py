@@ -1,28 +1,24 @@
 import json
 from backend.agents.state import AgentState
 from backend.config import settings
-from langchain_google_genai import ChatGoogleGenerativeAI
+from backend.llm import get_llm
 from langchain_core.messages import SystemMessage, HumanMessage
 
 def supervisor(state: AgentState) -> dict:
     """Supervisor agent that orchestrates the flow of work, plans tasks, and routes to specialists."""
-    if not settings.GOOGLE_API_KEY:
+    if not settings.GROQ_API_KEY:
         # Fallback if key missing
         agent_outputs = dict(state.get("agent_outputs", {}))
         error_log = list(state.get("error_log", []))
-        error_log.append("GOOGLE_API_KEY missing in supervisor.")
+        error_log.append("GROQ_API_KEY is missing in supervisor.")
         return {
             "current_agent": "END",
             "error_log": error_log,
             "step_count": state.get("step_count", 0) + 1
         }
 
-    # Initialize Gemini model
-    llm = ChatGoogleGenerativeAI(
-        model=settings.MODEL_NAME,
-        google_api_key=settings.GOOGLE_API_KEY,
-        temperature=0.1
-    )
+    # Initialize model dynamically
+    llm = get_llm(temperature=0.1)
     
     system_prompt = (
         "You are an orchestrator (Supervisor) for a multi-agent system. Given a user task, "

@@ -1,27 +1,23 @@
 from backend.agents.state import AgentState
 from backend.config import settings
-from langchain_google_genai import ChatGoogleGenerativeAI
+from backend.llm import get_llm
 from langchain_core.messages import SystemMessage, HumanMessage
 
 def writer(state: AgentState) -> dict:
     """Writer agent that compiles research and code findings into a long-form markdown blog post or report."""
-    if not settings.GOOGLE_API_KEY:
+    if not settings.GROQ_API_KEY:
         agent_outputs = dict(state.get("agent_outputs", {}))
-        agent_outputs["writer"] = "Error: Google API key missing. Cannot generate draft."
+        agent_outputs["writer"] = "Error: Groq API key missing. Cannot generate draft."
         error_log = list(state.get("error_log", []))
-        error_log.append("GOOGLE_API_KEY missing in writer.")
+        error_log.append("GROQ_API_KEY is missing in writer.")
         return {
             "agent_outputs": agent_outputs,
             "error_log": error_log,
             "step_count": state.get("step_count", 0) + 1
         }
 
-    # Initialize Gemini model
-    llm = ChatGoogleGenerativeAI(
-        model=settings.MODEL_NAME,
-        google_api_key=settings.GOOGLE_API_KEY,
-        temperature=0.7
-    )
+    # Initialize model dynamically
+    llm = get_llm(temperature=0.7)
     
     system_prompt = (
         "You are a technical writer. Using the research and code provided, write "

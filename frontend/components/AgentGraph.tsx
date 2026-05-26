@@ -67,7 +67,7 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
       (currentAgent === fromNodeId && status === "running") ||
       (currentAgent === toNodeId && status === "running");
     return {
-      stroke: isFlowing ? "#90f13b" : "#374151",
+      stroke: isFlowing ? "#CCFF00" : "#262626",
       strokeWidth: isFlowing ? 2.5 : 1.5,
       strokeDasharray: isFlowing ? "5, 5" : "none",
       className: isFlowing ? "animate-[dash_1s_linear_infinite]" : "",
@@ -75,13 +75,13 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
   };
 
   return (
-    <div className="relative w-full h-[360px] bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
+    <div className="relative w-full h-[360px] bg-black/80 border border-slate-900 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
       {/* SVG Canvas for Connections */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none">
         <defs>
           <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#90f13b" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#90f13b" stopOpacity="0" />
+            <stop offset="0%" stopColor="#CCFF00" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#CCFF00" stopOpacity="0" />
           </radialGradient>
           <style>{`
             @keyframes dash {
@@ -128,7 +128,7 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
             className={`w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-lg transition-all duration-300 ${
               node.active
                 ? "bg-kiwi border-tangy text-slate-950 scale-110 shadow-kiwi/30"
-                : "bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500"
+                : "bg-black border-slate-800 text-slate-400 hover:border-slate-700"
             }`}
           >
             {node.id === "supervisor" && status === "running" && !node.active ? (

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Hive - Multi-Agent Orchestrator",
-  description: "A dynamic multi-agent system powered by LangGraph, Gemini 2.0 Flash, Tavily, and E2B.",
+  description: "A dynamic multi-agent system powered by LangGraph, Groq, Tavily, and E2B.",
 };
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full dark antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-kiwi/30">
+      <body className="min-h-full flex flex-col bg-black text-slate-100 selection:bg-kiwi/30">
         {children}
         <Toaster />
       </body>

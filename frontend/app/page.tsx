@@ -7,6 +7,7 @@ import { AgentTerminal } from "../components/AgentTerminal";
 import { MarkdownOutput } from "../components/MarkdownOutput";
 import { HumanInterrupt } from "../components/HumanInterrupt";
 import { audioManager } from "../lib/audio";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,10 @@ import {
   Radio,
   Crosshair,
   Lock,
-  ChevronRight
+  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Trash2
 } from "lucide-react";
 
 interface DBRun {
@@ -100,6 +104,7 @@ export default function MainPage() {
   const [bootProgress, setBootProgress] = useState(0);
   const [bootLogs, setBootLogs] = useState<string[]>([]);
   const [bootFinished, setBootFinished] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const socket = useAgentSocket();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -279,90 +284,104 @@ export default function MainPage() {
     setActiveTab("terminal");
   };
 
+  // Delete a run from history and database
+  const handleDeleteRun = async (e: React.MouseEvent, runId: string) => {
+    e.stopPropagation();
+    handleClickSound();
+    
+    const previousRuns = [...runs];
+    setRuns((prev) => prev.filter((r) => r.id !== runId));
+    if (selectedRunId === runId) {
+      setSelectedRunId(null);
+      socket.reset();
+    }
+    
+    try {
+      const res = await fetch(`${apiUrl}/api/runs/${runId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        throw new Error("HTTP error " + res.status);
+      }
+      toast.success("Task deleted successfully");
+    } catch (err: any) {
+      console.error(err);
+      audioManager.playAlert();
+      setRuns(previousRuns);
+      toast.error("Failed to delete task", {
+        description: err.message || "An error occurred while deleting the task run.",
+      });
+    }
+  };
+
   const selectedRun = runs.find((r) => r.id === selectedRunId);
 
-  // If loading screen is active, display the honeycomb boot sequence
   if (showBootLoader) {
     return (
       <div 
-        className={`fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-50 hud-scanline select-none transition-all duration-500 ${
+        className={`fixed inset-0 bg-black z-50 select-none transition-all duration-500 ${
           bootFinished ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
         }`}
       >
-        <div className="absolute inset-0 hud-grid opacity-15" />
+        {/* Background Grid */}
+        <div className="absolute inset-0 hud-grid opacity-15 pointer-events-none z-0" />
         
+        {/* Background Scanlines */}
+        <div className="absolute inset-0 hud-scanline pointer-events-none z-1" />
+
         {/* Glow sweeps */}
-        <div className="absolute w-[600px] h-[600px] bg-kiwi/5 rounded-full blur-[120px]" />
+        <div className="absolute w-[600px] h-[600px] bg-kiwi/5 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none" />
         
-        {/* Centered Honeycomb Hexagon Structure */}
-        <div className="relative mb-12 flex flex-col items-center">
+        {/* Foreground Content Container - Flex Layout */}
+        <div className="absolute inset-0 flex flex-col items-center justify-between z-10 py-16">
+          {/* Top spacer to balance the layout and force logo to vertical center */}
+          <div className="flex-1" />
           
-          {/* Animated concentric loader vectors */}
-          <div className="absolute w-44 h-44 rounded-full border border-kiwi/20 border-dashed animate-[spin_10s_linear_infinite]" />
-          <div className="absolute w-36 h-36 rounded-full border border-kiwi/10 animate-[spin_5s_linear_infinite_reverse]" />
-          
-          {/* Hexagonal Hive Logo (SVG) */}
-          <div className="w-24 h-24 flex items-center justify-center relative z-10 animate-pulse">
-            <svg viewBox="0 0 100 100" className="w-full h-full text-kiwi filter drop-shadow-[0_0_12px_rgba(144,241,59,0.5)]">
-              {/* Outer hexagonal shell */}
-              <polygon 
-                points="50,5 90,27 90,73 50,95 10,73 10,27" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="1.5" 
-                className="origin-center animate-[spin_20s_linear_infinite]"
-              />
-              {/* Middle structural frame */}
-              <polygon 
-                points="50,15 80,32 80,68 50,85 20,68 20,32" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="1" 
-                strokeDasharray="4 4"
-                className="origin-center animate-[spin_15s_linear_infinite_reverse]"
-              />
-              {/* Nested Honeycomb clusters (Inner Core) */}
-              <polygon points="50,28 69,39 69,61 50,72 31,61 31,39" fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="1" />
-              {/* Inner core node points */}
-              <circle cx="50" cy="28" r="2" fill="currentColor" />
-              <circle cx="69" cy="39" r="2" fill="currentColor" />
-              <circle cx="69" cy="61" r="2" fill="currentColor" />
-              <circle cx="50" cy="72" r="2" fill="currentColor" />
-              <circle cx="31" cy="61" r="2" fill="currentColor" />
-              <circle cx="31" cy="39" r="2" fill="currentColor" />
-              
-              {/* Center connecting nucleus */}
-              <polygon points="50,40 59,45 59,55 50,60 41,55 41,45" fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="0.5" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Digital HUD Counters & Telemetry Logs */}
-        <div className="w-[450px] font-mono text-center relative z-10">
-          <div className="flex items-center justify-between mb-2.5 px-1 border-b border-kiwi/15 pb-1">
-            <span className="text-[10px] tracking-widest text-kiwi uppercase font-bold flex items-center gap-1.5 animate-pulse">
-              <Radio className="w-3.5 h-3.5 animate-pulse text-kiwi" /> Core System Booting
-            </span>
-            <span className="text-xs text-tangy font-bold glow-text-tangy">
-              {bootProgress.toString().padStart(3, "0")}%
-            </span>
-          </div>
-
-          {/* Scrolling System Initializer logs */}
-          <div className="h-28 bg-slate-950/80 border border-slate-900 rounded-lg p-3 text-left overflow-hidden flex flex-col justify-end gap-1 select-none backdrop-blur-md">
-            {bootLogs.slice(-4).map((log, idx) => (
-              <div key={idx} className="text-[10px] text-slate-500 flex items-center gap-1">
-                <ChevronRight className="w-3 h-3 text-kiwi flex-shrink-0" />
-                <span className="truncate">{log}</span>
+          {/* Main centered container for the logo and project name */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center my-4">
+            <Logo className="w-56 h-auto text-kiwi" />
+            
+            {/* Project Name Header with Sci-Fi HUD style */}
+            <div className="mt-8 flex flex-col items-center select-none">
+              <h1 className="text-4xl font-extrabold tracking-[0.4em] text-white font-mono pl-[0.4em] glow-text-kiwi animate-[pulse_3s_infinite] transition-all duration-300">
+                HIVE
+              </h1>
+              {/* Animated accent line */}
+              <div className="h-[1px] w-36 bg-gradient-to-r from-transparent via-kiwi/40 to-transparent mt-3.5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-kiwi to-transparent -translate-x-full animate-laser-sweep" />
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* Coordinate frames */}
-          <div className="flex justify-between items-center mt-3 text-[9px] text-slate-600">
-            <span>[X:043 // Y:812]</span>
-            <span>SECURE LINK RESOLVED</span>
-            <span>LOCALE: AP_SYS_v2.5</span>
+          {/* Bottom HUD telemetry box wrapped in a flex-1 container aligned to the bottom */}
+          <div className="flex-1 flex flex-col justify-end items-center w-full">
+            <div className="w-[450px] max-w-[90%] font-mono text-center">
+              <div className="flex items-center justify-between mb-2.5 px-1 border-b border-kiwi/15 pb-1">
+                <span className="text-[10px] tracking-widest text-kiwi uppercase font-bold flex items-center gap-1.5">
+                  <Radio className="w-3.5 h-3.5 text-kiwi" /> Core System Booting
+                </span>
+                <span className="text-xs text-tangy font-bold glow-text-tangy">
+                  {bootProgress.toString().padStart(3, "0")}%
+                </span>
+              </div>
+
+              {/* Scrolling System Initializer logs */}
+              <div className="h-28 bg-black/80 border border-kiwi/15 rounded-lg p-3 text-left overflow-hidden flex flex-col justify-end gap-1 select-none backdrop-blur-md">
+                {bootLogs.slice(-4).map((log, idx) => (
+                  <div key={idx} className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <ChevronRight className="w-3 h-3 text-kiwi flex-shrink-0" />
+                    <span className="truncate">{log}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Coordinate frames */}
+              <div className="flex justify-between items-center mt-3 text-[9px] text-slate-600">
+                <span>[X:043 // Y:812]</span>
+                <span>SECURE LINK RESOLVED</span>
+                <span>LOCALE: AP_SYS_v2.5</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -371,138 +390,166 @@ export default function MainPage() {
 
   // Dashboard Core Frame
   return (
-    <div className="flex flex-1 overflow-hidden h-screen bg-slate-950 font-sans hud-scanline select-none relative">
+    <div className="flex flex-1 overflow-hidden h-screen bg-black font-sans select-none relative">
       <div className="absolute inset-0 hud-grid opacity-10 pointer-events-none" />
       
       {/* Visual scanning line */}
       <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-kiwi/5 to-transparent animate-sweep-bar pointer-events-none z-10" />
 
       {/* 1. Sidebar - Run History */}
-      <aside className="w-80 border-r border-slate-900 bg-slate-950 flex flex-col h-full flex-shrink-0 relative z-20">
-        
-        {/* Decorative corner tags */}
-        <span className="absolute top-0 right-0 text-[8px] text-slate-700 font-mono pr-1 select-none">H-SYS_V.03</span>
-        
-        {/* Sidebar Header */}
-        <div className="p-4 border-b border-slate-900 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-kiwi/10 rounded-xl text-kiwi border border-kiwi/20 shadow-lg shadow-kiwi/5">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="font-bold text-xs text-white tracking-widest uppercase font-mono">
-                <ScrambledText text="HIVE CONSOLE" />
-              </h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${backendHealth === "online" ? "bg-kiwi animate-pulse" : backendHealth === "checking" ? "bg-amber-500" : "bg-rose-500"}`} />
-                <span className="text-[9px] text-slate-500 capitalize font-mono">{backendHealth === "online" ? "port 8000 online" : backendHealth === "checking" ? "resolving..." : "offline"}</span>
+      <aside 
+        className={`bg-black flex flex-col h-full flex-shrink-0 relative z-20 border-r border-slate-900/60 transition-all duration-300 ease-in-out overflow-hidden ${
+          sidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 border-r-0 pointer-events-none"
+        }`}
+      >
+        <div className="w-80 h-full flex flex-col flex-shrink-0 relative">
+          {/* Sidebar Header */}
+          <div className="p-4 border-b border-slate-900 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-kiwi/10 rounded-xl text-kiwi border border-kiwi/20 shadow-lg shadow-kiwi/5">
+                <Logo className="w-5 h-5 text-kiwi" hideBackgroundPath />
+              </div>
+              <div>
+                <h1 className="font-bold text-xs text-white tracking-widest uppercase font-mono">
+                  <ScrambledText text="HIVE CONSOLE" />
+                </h1>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${backendHealth === "online" ? "bg-kiwi animate-pulse" : backendHealth === "checking" ? "bg-amber-500" : "bg-rose-500"}`} />
+                  <span className="text-[9px] text-slate-500 capitalize font-mono">{backendHealth === "online" ? "port 8000 online" : backendHealth === "checking" ? "resolving..." : "offline"}</span>
+                </div>
               </div>
             </div>
-          </div>
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={handleNewRunRequest}
-            onMouseEnter={handleHoverSound}
-            className="w-8 h-8 rounded-lg border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white"
-            title="Create new task"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Sidebar Navigation */}
-        <div className="p-3 border-b border-slate-900/60 bg-slate-950/20">
-          <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono font-bold px-2 flex items-center justify-between">
-            <span className="flex items-center gap-1.5"><History className="w-3.5 h-3.5" /> <ScrambledText text="TASK ARCHIVES" delay={200} /></span>
-            <button 
-              onClick={() => { handleClickSound(); fetchRuns(); }} 
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={handleNewRunRequest}
               onMouseEnter={handleHoverSound}
-              className="hover:text-white transition"
+              className="w-8 h-8 rounded-lg border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white"
+              title="Create new task"
             >
-              <RotateCw className="w-3 h-3" />
-            </button>
+              <Plus className="w-4 h-4" />
+            </Button>
           </div>
-        </div>
 
-        {/* History List */}
-        <ScrollArea className="flex-1 p-2 space-y-1.5">
-          {runs.length === 0 ? (
-            <div className="text-center py-10 text-xs text-slate-700 font-mono">
-              No previous runs. Submit your first prompt.
+          {/* Sidebar Navigation */}
+          <div className="p-3 border-b border-slate-900/60 bg-black/20">
+            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono font-bold px-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5"><History className="w-3.5 h-3.5" /> <ScrambledText text="TASK ARCHIVES" delay={200} /></span>
+              <button 
+                onClick={() => { handleClickSound(); fetchRuns(); }} 
+                onMouseEnter={handleHoverSound}
+                className="hover:text-white transition"
+              >
+                <RotateCw className="w-3 h-3" />
+              </button>
             </div>
-          ) : (
-            runs.map((run) => {
-              const isSelected = selectedRunId === run.id;
-              const dateStr = new Date(run.created_at).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit"
-              });
+          </div>
 
-              return (
-                <button
-                  key={run.id}
-                  onClick={() => handleSelectRun(run)}
-                  onMouseEnter={handleHoverSound}
-                  className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1.5 mb-2 relative overflow-hidden group ${
-                    isSelected
-                      ? "bg-slate-900/80 border-kiwi/40 shadow-lg shadow-kiwi/5"
-                      : "bg-slate-950/50 border-slate-900 hover:bg-slate-900/30 hover:border-slate-800"
-                  }`}
-                >
-                  {/* Glowing vertical slider on selected */}
-                  {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-kiwi" />
-                  )}
-                  
-                  <div className="flex items-start justify-between gap-2">
-                    <span className={`text-[11px] font-mono font-bold truncate ${isSelected ? "text-kiwi" : "text-slate-300"}`}>
-                      {run.task}
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className={`text-[8px] px-1.5 py-0 font-mono capitalize border-0 ${
-                        run.status === "complete"
-                          ? "text-kiwi bg-kiwi/10"
-                          : run.status === "error"
-                          ? "text-rose-400 bg-rose-950/20"
-                          : "text-tangy bg-tangy/10 animate-pulse"
-                      }`}
-                    >
-                      {run.status}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono">
-                    <span>{dateStr}</span>
-                    <span>STEPS: {run.step_count}</span>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </ScrollArea>
+          {/* History List */}
+          <ScrollArea className="flex-1 p-2 space-y-1.5">
+            {runs.length === 0 ? (
+              <div className="text-center py-10 text-xs text-slate-700 font-mono">
+                No previous runs. Submit your first prompt.
+              </div>
+            ) : (
+              runs.map((run) => {
+                const isSelected = selectedRunId === run.id;
+                const dateStr = new Date(run.created_at).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                });
+
+                return (
+                  <button
+                    key={run.id}
+                    onClick={() => handleSelectRun(run)}
+                    onMouseEnter={handleHoverSound}
+                    className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1.5 mb-2 relative overflow-hidden group ${
+                      isSelected
+                        ? "bg-slate-900/80 border-kiwi/40 shadow-lg shadow-kiwi/5"
+                        : "bg-black/50 border-slate-900 hover:bg-slate-900/30 hover:border-slate-800"
+                    }`}
+                  >
+                    {/* Glowing vertical slider on selected */}
+                    {isSelected && (
+                      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-kiwi" />
+                    )}
+                    
+                    <div className="flex items-start justify-between gap-2">
+                      <span className={`text-[11px] font-mono font-bold truncate ${isSelected ? "text-kiwi" : "text-slate-300"}`}>
+                        {run.task}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[8px] px-1.5 py-0 font-mono capitalize border-0 ${
+                          run.status === "complete"
+                            ? "text-kiwi bg-kiwi/10"
+                            : run.status === "error"
+                            ? "text-rose-400 bg-rose-950/20"
+                            : "text-tangy bg-tangy/10 animate-pulse"
+                        }`}
+                      >
+                        {run.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono">
+                      <span>{dateStr}</span>
+                      <div className="flex items-center gap-2">
+                        <span>STEPS: {run.step_count}</span>
+                        <button
+                          onClick={(e) => handleDeleteRun(e, run.id)}
+                          className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-500 transition duration-150 p-0.5"
+                          title="Delete run"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </ScrollArea>
+        </div>
       </aside>
 
       {/* 2. Main Content Frame */}
-      <main className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden relative z-20">
+      <main className="flex-1 flex flex-col h-full bg-black overflow-hidden relative z-20">
         
         {/* Main Header */}
-        <header className="px-6 py-4 border-b border-slate-900 bg-slate-950 flex items-center justify-between relative">
+        <header className="px-6 py-4 border-b border-slate-900 bg-black flex items-center justify-between relative">
           
           {/* Intersection marks */}
           <span className="absolute bottom-[-5px] left-[-5px] text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
           <span className="absolute bottom-[-5px] right-[-5px] text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
 
           <div className="flex items-center gap-3">
-            <Cpu className="w-5 h-5 text-kiwi filter drop-shadow-[0_0_8px_rgba(144,241,59,0.3)]" />
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={() => { handleClickSound(); setSidebarOpen(!sidebarOpen); }}
+              onMouseEnter={handleHoverSound}
+              className="w-8 h-8 rounded-lg border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white"
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              {sidebarOpen ? (
+                <PanelLeftClose className="w-4 h-4" />
+              ) : (
+                <PanelLeftOpen className="w-4 h-4 text-kiwi" />
+              )}
+            </Button>
+            
+            <Separator orientation="vertical" className="h-4 bg-slate-800/60" />
+
+            <Cpu className="w-5 h-5 text-kiwi filter drop-shadow-[0_0_8px_rgba(204,255,0,0.3)]" />
             <div>
-              <h2 className="text-xs font-bold text-white tracking-widest uppercase font-mono">
-                <ScrambledText text="MUTLI-AGENT ORCHESTRATOR HUD" delay={400} />
+              <h2 className="text-xs font-bold text-white tracking-widest font-mono">
+                <ScrambledText text="Hive — Multi-Agent AI System" delay={400} />
               </h2>
-              <p className="text-[10px] text-slate-500 font-mono uppercase">Topology: Supervisor Routing v2.5</p>
+              <p className="text-[10px] text-slate-500 font-mono">Supervisor · Researcher · Coder · Writer · Critic</p>
             </div>
           </div>
 
@@ -520,23 +567,18 @@ export default function MainPage() {
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </Button>
 
-            {selectedRunId && (
+            {selectedRunId && selectedRun?.trace_url && (
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-slate-900 border-slate-800 text-slate-400 text-[9px] font-mono select-all">
-                  ID: {selectedRunId}
-                </Badge>
-                {selectedRun?.trace_url && (
-                  <a
-                    href={selectedRun.trace_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    onMouseEnter={handleHoverSound}
-                    onClick={handleClickSound}
-                    className="text-[9px] text-tangy hover:text-tangy/80 font-mono uppercase tracking-wider font-semibold flex items-center gap-1.5 bg-tangy/10 border border-tangy/30 px-2 py-0.5 rounded transition"
-                  >
-                    <Server className="w-3. h-3" /> LangSmith Trace
-                  </a>
-                )}
+                <a
+                  href={selectedRun.trace_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  onMouseEnter={handleHoverSound}
+                  onClick={handleClickSound}
+                  className="text-[9px] text-tangy hover:text-tangy/80 font-mono uppercase tracking-wider font-semibold flex items-center gap-1.5 bg-tangy/10 border border-tangy/30 px-2 py-0.5 rounded transition"
+                >
+                  <Server className="w-3 h-3" /> LangSmith Trace
+                </a>
               </div>
             )}
           </div>
@@ -547,41 +589,55 @@ export default function MainPage() {
           
           {/* A. Task Entry Area (Show only if no active/selected run) */}
           {!selectedRunId && (
-            <Card className="border-slate-900 bg-slate-950/40 shadow-2xl relative overflow-hidden backdrop-blur-md glow-border-kiwi">
+            <Card className="border-slate-900 bg-black/40 shadow-2xl relative overflow-hidden backdrop-blur-md glow-border-kiwi">
               <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-kiwi/40 to-transparent" />
               
-              {/* Coordinate tag */}
-              <span className="absolute top-1 right-2 text-[8px] text-slate-700 font-mono">PANEL_SYS.BOOT</span>
-              
               <CardHeader>
-                <CardTitle className="text-xs font-mono text-kiwi uppercase tracking-widest flex items-center gap-2">
-                  <Crosshair className="w-4 h-4" /> <ScrambledText text="EXECUTE NEW DEPLOYMENT" delay={200} />
+                <CardTitle className="text-xs font-mono text-kiwi tracking-widest flex items-center gap-2">
+                  <Crosshair className="w-4 h-4" /> <ScrambledText text="What do you want to accomplish?" delay={200} />
                 </CardTitle>
-                <CardDescription className="text-[10px] text-slate-500 font-mono uppercase">
-                  Input parameters below. The orchestrator will verify execution inside a virtual python sandbox.
+                <CardDescription className="text-[10px] text-slate-500 font-mono">
+                  Describe your goal. Hive's agents will research, write code, and deliver a complete answer together.
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleStartRun}>
                 <CardContent className="space-y-4">
                   <Textarea
-                    placeholder="Enter your prompt. E.g., 'Research current Bitcoin price and run a python script to calculate +35% investment value.'"
+                    placeholder='e.g. "Research the top AI frameworks in 2026 and write a comparison with code examples"'
                     value={taskInput}
                     onChange={(e) => setTaskInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        if (e.ctrlKey || e.shiftKey) {
+                          // Ctrl+Enter or Shift+Enter inserts a new line (default behavior)
+                          return;
+                        } else {
+                          // Plain Enter submits the form
+                          e.preventDefault();
+                          if (taskInput.trim() && !isSubmitting && backendHealth === "online") {
+                            const form = e.currentTarget.form;
+                            if (form) {
+                              form.requestSubmit();
+                            }
+                          }
+                        }
+                      }
+                    }}
                     required
                     className="min-h-[110px] bg-slate-900 border-slate-800 text-xs font-mono text-slate-300 placeholder:text-slate-600 focus-visible:ring-kiwi rounded-xl"
                   />
                 </CardContent>
-                <CardFooter className="flex justify-between border-t border-slate-900/60 pt-4 bg-slate-950/30">
+                <CardFooter className="flex justify-between border-t border-slate-900/60 pt-4 bg-black/30">
                   <div className="text-[9px] text-slate-500 flex items-center gap-1.5 font-mono">
-                    <Lock className="w-3.5 h-3.5 text-kiwi" /> SECURED INTEGRATION: GEMINI 2.5 + TAVILY + E2B SANDBOX
+                    <Lock className="w-3.5 h-3.5 text-kiwi" /> Powered by Groq · Tavily · E2B
                   </div>
                   <Button
                     type="submit"
                     onMouseEnter={handleHoverSound}
                     disabled={!taskInput.trim() || isSubmitting || backendHealth !== "online"}
-                    className="bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold font-mono text-[10px] tracking-widest uppercase py-2 px-5 rounded-lg flex items-center gap-1.5 transition shadow-lg shadow-kiwi/15"
+                    className="bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold font-mono text-[10px] tracking-widest py-2 px-5 rounded-lg flex items-center gap-1.5 transition shadow-lg shadow-kiwi/15"
                   >
-                    DEPLOY CORE
+                    Run Agents
                   </Button>
                 </CardFooter>
               </form>
