@@ -17,11 +17,10 @@ def execute_python(code: str) -> str:
         })
         
     try:
-        from e2b_code_interpreter import CodeInterpreter
-        # Run code in E2B sandbox with a 30 second timeout
-        # E2B Python library uses the API key from constructor or env var
-        with CodeInterpreter(api_key=api_key) as sandbox:
-            execution = sandbox.notebook.exec_cell(code)
+        from e2b_code_interpreter import Sandbox
+        # Run code in E2B sandbox
+        with Sandbox(api_key=api_key) as sandbox:
+            execution = sandbox.run_code(code)
             
             stdout = execution.stdout
             stderr = execution.stderr
