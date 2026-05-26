@@ -19,11 +19,11 @@ def execute_python(code: str) -> str:
     try:
         from e2b_code_interpreter import Sandbox
         # Run code in E2B sandbox
-        with Sandbox(api_key=api_key) as sandbox:
+        with Sandbox.create(api_key=api_key) as sandbox:
             execution = sandbox.run_code(code)
             
-            stdout = execution.stdout
-            stderr = execution.stderr
+            stdout = "".join(execution.logs.stdout)
+            stderr = "".join(execution.logs.stderr)
             
             success = True
             if execution.error:
