@@ -2,6 +2,9 @@
 
 import React, { useEffect, useRef } from "react";
 import { AgentEvent } from "../hooks/useAgentSocket";
+import { audioManager } from "../lib/audio";
+import { Terminal, ShieldCheck, AlertOctagon, HelpCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface AgentTerminalProps {
   events: AgentEvent[];
@@ -9,10 +12,41 @@ interface AgentTerminalProps {
 
 export function AgentTerminal({ events }: AgentTerminalProps) {
   const terminalEndRef = useRef<HTMLDivElement | null>(null);
+  const prevEventsLength = useRef(0);
 
+  // Play audio triggers on new incoming stream events
   useEffect(() => {
+    if (events.length > prevEventsLength.current) {
+      const latestEvent = events[events.length - 1];
+      if (latestEvent) {
+        if (latestEvent.type === "error") {
+          audioManager.playAlert();
+        } else if (latestEvent.type === "complete") {
+          audioManager.playSuccess();
+        } else {
+          audioManager.playDataTick();
+        }
+      }
+    }
+    prevEventsLength.current = events.length;
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [events]);
+
+  const getAgentBadge = (agent: string) => {
+    const config: Record<string, { label: string; style: string }> = {
+      supervisor: { label: "🤖 SUPERVISOR", style: "bg-purple-950/60 border-purple-500/20 text-purple-400" },
+      researcher: { label: "🔍 RESEARCHER", style: "bg-amber-950/60 border-amber-500/20 text-amber-400" },
+      coder: { label: "💻 CODER", style: "bg-blue-950/60 border-blue-500/20 text-blue-400" },
+      writer: { label: "✍️ WRITER", style: "bg-emerald-950/60 border-emerald-500/20 text-emerald-400" },
+      critic: { label: "⚖️ CRITIC", style: "bg-rose-950/60 border-rose-500/20 text-rose-400" },
+    };
+    const matched = config[agent.toLowerCase()] || { label: agent.toUpperCase(), style: "bg-slate-900 border-slate-700 text-slate-300" };
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-bold font-mono border tracking-wider ${matched.style}`}>
+        {matched.label}
+      </span>
+    );
+  };
 
   const renderEventContent = (event: AgentEvent, idx: number) => {
     const timeStr = event.timestamp
@@ -22,9 +56,14 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
     switch (event.type) {
       case "agent_start":
         return (
-          <div key={idx} className="text-slate-400">
-            <span className="text-indigo-400 font-semibold font-mono">[{timeStr}] [{event.agent.toUpperCase()}]</span>{" "}
-            {event.data?.message || "Starting agent process..."}
+          <div key={idx} className="flex items-start gap-3 border-b border-slate-900/60 pb-2 mb-1">
+            <span className="text-[10px] text-slate-600 font-mono flex-shrink-0 mt-0.5">[{timeStr}]</span>
+            <div className="flex flex-col gap-1.5">
+              <div>{getAgentBadge(event.agent)}</div>
+              <div className="text-slate-400 text-xs font-mono">
+                {event.data?.message || "Initiating task cycle..."}
+              </div>
+            </div>
           </div>
         );
 
@@ -32,17 +71,19 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
         const toolName = event.data?.tool || "Unknown Tool";
         const argsStr = JSON.stringify(event.data?.args || {}, null, 2);
         return (
-          <div key={idx} className="pl-4 border-l border-amber-600/50 my-1">
-            <div className="text-amber-400 font-mono">
-              <span className="text-slate-500 font-mono">[{timeStr}]</span> 🔧 calling tool: <span className="font-semibold underline">{toolName}</span>
+          <div key={idx} className="pl-4 border-l-2 border-amber-500/40 my-3 flex flex-col gap-2">
+            <div className="text-amber-400 font-mono text-xs flex items-center gap-2">
+              <span className="text-slate-600 font-mono text-[10px]">[{timeStr}]</span> 
+              <span className="text-amber-500">🔧 CALLING TOOL:</span> 
+              <span className="font-semibold underline tracking-widest">{toolName}</span>
             </div>
             {event.data?.args?.code && (
-              <pre className="mt-1 bg-slate-900/80 p-2 rounded border border-slate-800 text-xs text-indigo-300 font-mono overflow-x-auto max-h-48">
+              <pre className="mt-0.5 bg-slate-950 p-3 rounded-lg border border-slate-900 text-xs text-indigo-300 font-mono overflow-x-auto max-h-48 shadow-inner">
                 <code>{event.data.args.code}</code>
               </pre>
             )}
             {!event.data?.args?.code && Object.keys(event.data?.args || {}).length > 0 && (
-              <pre className="mt-1 bg-slate-900/40 p-1.5 rounded text-[11px] text-slate-400 font-mono">
+              <pre className="mt-0.5 bg-slate-950/50 p-2 rounded-lg text-[10px] text-slate-500 font-mono border border-slate-900">
                 {argsStr}
               </pre>
             )}
@@ -54,18 +95,26 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
         const toolName = event.data?.tool || "Unknown Tool";
         let resultStr = event.data?.result || "";
         
-        // If result is large, truncate it
         if (typeof resultStr === "object") {
           resultStr = JSON.stringify(resultStr, null, 2);
         }
+        
+        const isError = resultStr.includes("failure") || resultStr.includes("Error") || resultStr.includes("failed");
         const truncatedResult = resultStr.length > 500 ? resultStr.slice(0, 500) + "\n...[truncated]" : resultStr;
         
         return (
-          <div key={idx} className="pl-4 border-l border-emerald-600/50 my-1">
-            <div className="text-emerald-400 font-mono">
-              <span className="text-slate-500 font-mono">[{timeStr}]</span> 📥 result from <span className="font-semibold underline">{toolName}</span>:
+          <div key={idx} className={`pl-4 border-l-2 my-3 flex flex-col gap-2 ${isError ? "border-rose-500/40" : "border-emerald-500/40"}`}>
+            <div className={`font-mono text-xs flex items-center gap-2 ${isError ? "text-rose-400" : "text-emerald-400"}`}>
+              <span className="text-slate-600 font-mono text-[10px]">[{timeStr}]</span> 
+              <span>📥 RESULT FROM:</span> 
+              <span className="font-semibold underline tracking-widest">{toolName}</span>
+              {isError && <Badge variant="outline" className="text-[8px] bg-rose-950/20 border-rose-500/20 text-rose-400 font-bold px-1.5 py-0">WARNING</Badge>}
             </div>
-            <pre className="mt-1 bg-slate-900/60 p-2 rounded border border-slate-800/50 text-xs text-emerald-300/90 font-mono overflow-x-auto max-h-48 whitespace-pre-wrap">
+            <pre className={`mt-0.5 p-3 rounded-lg border text-xs font-mono overflow-x-auto max-h-48 shadow-inner whitespace-pre-wrap ${
+              isError 
+                ? "bg-rose-950/5 border-rose-900/30 text-rose-300" 
+                : "bg-slate-950 border-slate-900 text-emerald-300/90"
+            }`}>
               {truncatedResult}
             </pre>
           </div>
@@ -73,7 +122,6 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
       }
 
       case "agent_end": {
-        // If writer finishes, we don't dump the entire markdown in the terminal logs
         const isWriter = event.agent === "writer";
         const outputText = typeof event.data?.output === "string" ? event.data.output : JSON.stringify(event.data?.output || "");
         const preview = isWriter 
@@ -81,9 +129,13 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
           : outputText.length > 300 ? outputText.slice(0, 300) + "..." : outputText;
 
         return (
-          <div key={idx} className="text-slate-300 font-mono mt-1 mb-2">
-            <span className="text-indigo-400 font-semibold font-mono">[{timeStr}] [{event.agent.toUpperCase()}]</span> completed step. Output:
-            <div className="mt-1 bg-slate-900/90 p-2 rounded border border-slate-800 text-slate-400 whitespace-pre-wrap text-xs">
+          <div key={idx} className="flex flex-col gap-1.5 border-b border-slate-900/60 pb-3 mb-1 mt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-600 font-mono">[{timeStr}]</span>
+              {getAgentBadge(event.agent)}
+              <span className="text-slate-400 text-xs font-mono font-semibold">COMPLETED ITERATION</span>
+            </div>
+            <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-900 text-slate-400 whitespace-pre-wrap text-xs font-mono shadow-md">
               {preview}
             </div>
           </div>
@@ -92,15 +144,23 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
 
       case "complete":
         return (
-          <div key={idx} className="text-emerald-400 font-semibold font-mono border-t border-emerald-900/40 pt-2 mt-2">
-            🚀 [{timeStr}] WORKFLOW FULLY COMPLETED. Steps run: {event.step}
+          <div key={idx} className="flex items-center gap-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-4 mt-4 shadow-xl shadow-emerald-950/10">
+            <ShieldCheck className="w-5 h-5 text-emerald-400 flex-shrink-0 animate-pulse" />
+            <div className="font-mono text-xs text-emerald-400">
+              <div className="font-bold tracking-widest text-[10px] uppercase">Synapse Complete</div>
+              <div className="mt-0.5 text-emerald-500/90">[{timeStr}] WORKFLOW FULLY COMPLETED. Steps run: {event.step}</div>
+            </div>
           </div>
         );
 
       case "error":
         return (
-          <div key={idx} className="text-rose-400 font-semibold font-mono border-t border-rose-900/40 pt-2 mt-2">
-            🚨 [{timeStr}] WORKFLOW FAILED: {event.data?.message || "Internal agent error"}
+          <div key={idx} className="flex items-center gap-3 bg-rose-950/20 border border-rose-500/20 rounded-xl p-4 mt-4 shadow-xl shadow-rose-950/10">
+            <AlertOctagon className="w-5 h-5 text-rose-400 flex-shrink-0 animate-bounce" />
+            <div className="font-mono text-xs text-rose-400">
+              <div className="font-bold tracking-widest text-[10px] uppercase">Synapse Terminated</div>
+              <div className="mt-0.5 text-rose-500/90">[{timeStr}] PIPELINE FAILED: {event.data?.message || "Internal compiler exception"}</div>
+            </div>
           </div>
         );
 
@@ -110,25 +170,29 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
   };
 
   return (
-    <div className="flex flex-col h-[420px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-[460px] bg-slate-950 border border-slate-900 rounded-xl overflow-hidden shadow-2xl relative">
+      <div className="absolute top-0 right-12 text-[8px] text-slate-800 font-mono pointer-events-none select-none">PORT_STR.v2.5</div>
+      
       {/* Terminal Title Bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-slate-900 border-b border-slate-800 select-none">
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-900 select-none">
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
           <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-          <span className="ml-2.5 text-xs text-slate-400 font-semibold font-mono">hive-agent-orchestrator@stream</span>
+          <span className="ml-2.5 text-xs text-slate-400 font-semibold font-mono tracking-wider">hive-core@terminal:~</span>
         </div>
-        <div className="text-[10px] text-indigo-400/80 font-mono font-semibold animate-pulse">
-          LIVE FEED
+        <div className="text-[9px] text-indigo-400 font-mono font-bold tracking-widest flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
+          STREAMING DATA
         </div>
       </div>
 
       {/* Terminal Logs Area */}
-      <div className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed space-y-2.5 scrollbar-thin scrollbar-thumb-slate-800">
+      <div className="flex-1 overflow-y-auto p-5 font-mono text-xs leading-relaxed space-y-3.5 scrollbar-thin scrollbar-thumb-slate-800">
         {events.length === 0 ? (
-          <div className="text-slate-500 italic h-full flex items-center justify-center font-sans">
-            Terminal idle. Start a run to begin receiving execution logs.
+          <div className="text-slate-600 italic h-full flex flex-col gap-2 items-center justify-center font-mono select-none">
+            <Terminal className="w-7 h-7 text-slate-700 animate-pulse" />
+            <span>CONSOLE IDLE. DEPLOY PROMPT TO STREAM EVENTS</span>
           </div>
         ) : (
           events.map((event, idx) => renderEventContent(event, idx))
@@ -138,3 +202,4 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
     </div>
   );
 }
+
