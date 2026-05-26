@@ -567,20 +567,6 @@ export default function MainPage() {
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             </Button>
 
-            {selectedRunId && selectedRun?.trace_url && (
-              <div className="flex items-center gap-2">
-                <a
-                  href={selectedRun.trace_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  onMouseEnter={handleHoverSound}
-                  onClick={handleClickSound}
-                  className="text-[9px] text-tangy hover:text-tangy/80 font-mono uppercase tracking-wider font-semibold flex items-center gap-1.5 bg-tangy/10 border border-tangy/30 px-2 py-0.5 rounded transition"
-                >
-                  <Server className="w-3 h-3" /> LangSmith Trace
-                </a>
-              </div>
-            )}
           </div>
         </header>
 
