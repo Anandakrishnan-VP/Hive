@@ -33,7 +33,10 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
-  Trash2
+  Trash2,
+  Settings,
+  Sun,
+  Moon
 } from "lucide-react";
 
 interface DBRun {
@@ -98,6 +101,51 @@ export default function MainPage() {
   
   // Audio Mute State
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Settings & Theme State
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Initialize theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("hive_theme");
+    if (savedTheme === "light") {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove("dark");
+    } else {
+      setIsDarkMode(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
+  // Click outside to close settings
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
+    }
+    if (settingsOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [settingsOpen]);
+
+  const toggleTheme = () => {
+    handleClickSound();
+    const nextMode = !isDarkMode;
+    setIsDarkMode(nextMode);
+    if (nextMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("hive_theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("hive_theme", "light");
+    }
+  };
 
   // 2Advanced Boot Loading Screen States
   const [showBootLoader, setShowBootLoader] = useState(true);
@@ -390,27 +438,27 @@ export default function MainPage() {
 
   // Dashboard Core Frame
   return (
-    <div className="flex flex-1 overflow-hidden h-screen bg-black font-sans select-none relative">
-      <div className="absolute inset-0 hud-grid opacity-10 pointer-events-none" />
+    <div className="flex flex-1 overflow-hidden h-screen bg-background dark:bg-black font-sans select-none relative text-slate-800 dark:text-slate-100">
+      <div className="absolute inset-0 hud-grid opacity-[0.03] dark:opacity-10 pointer-events-none" />
       
       {/* Visual scanning line */}
       <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-kiwi/5 to-transparent animate-sweep-bar pointer-events-none z-10" />
-
+ 
       {/* 1. Sidebar - Run History */}
       <aside 
-        className={`bg-black flex flex-col h-full flex-shrink-0 relative z-20 border-r border-slate-900/60 transition-all duration-300 ease-in-out overflow-hidden ${
+        className={`bg-sidebar dark:bg-black flex flex-col h-full flex-shrink-0 relative z-20 border-r border-slate-300 dark:border-slate-900/60 transition-all duration-300 ease-in-out overflow-hidden ${
           sidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 border-r-0 pointer-events-none"
         }`}
       >
         <div className="w-80 h-full flex flex-col flex-shrink-0 relative">
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-slate-900 flex items-center justify-between">
+          <div className="p-4 border-b border-slate-300 dark:border-slate-900 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-kiwi/10 rounded-xl text-kiwi border border-kiwi/20 shadow-lg shadow-kiwi/5">
-                <Logo className="w-5 h-5 text-kiwi" hideBackgroundPath />
+              <div className="p-2 bg-slate-900/10 dark:bg-kiwi/10 rounded-xl text-slate-900 dark:text-kiwi border border-slate-900/20 dark:border-kiwi/20 shadow-lg shadow-slate-900/5 dark:shadow-kiwi/5">
+                <Logo className="w-5 h-5 text-current" hideBackgroundPath />
               </div>
               <div>
-                <h1 className="font-bold text-xs text-white tracking-widest uppercase font-mono">
+                <h1 className="font-bold text-xs text-slate-900 dark:text-white tracking-widest uppercase font-mono">
                   <ScrambledText text="HIVE CONSOLE" />
                 </h1>
                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -424,27 +472,27 @@ export default function MainPage() {
               variant="outline"
               onClick={handleNewRunRequest}
               onMouseEnter={handleHoverSound}
-              className="w-8 h-8 rounded-lg border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white"
+              className="w-8 h-8 rounded-lg border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
               title="Create new task"
             >
               <Plus className="w-4 h-4" />
             </Button>
           </div>
-
+ 
           {/* Sidebar Navigation */}
-          <div className="p-3 border-b border-slate-900/60 bg-black/20">
+          <div className="p-3 border-b border-slate-200 dark:border-slate-900/60 bg-slate-100/50 dark:bg-black/20">
             <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono font-bold px-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5"><History className="w-3.5 h-3.5" /> <ScrambledText text="TASK ARCHIVES" delay={200} /></span>
               <button 
                 onClick={() => { handleClickSound(); fetchRuns(); }} 
                 onMouseEnter={handleHoverSound}
-                className="hover:text-white transition"
+                className="hover:text-slate-900 dark:hover:text-white transition"
               >
                 <RotateCw className="w-3 h-3" />
               </button>
             </div>
           </div>
-
+ 
           {/* History List */}
           <ScrollArea className="flex-1 p-2 space-y-1.5">
             {runs.length === 0 ? (
@@ -460,16 +508,16 @@ export default function MainPage() {
                   hour: "2-digit",
                   minute: "2-digit"
                 });
-
+ 
                 return (
-                  <button
+                  <div
                     key={run.id}
                     onClick={() => handleSelectRun(run)}
                     onMouseEnter={handleHoverSound}
-                    className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1.5 mb-2 relative overflow-hidden group ${
+                    className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1.5 mb-2 relative overflow-hidden group cursor-pointer ${
                       isSelected
-                        ? "bg-slate-900/80 border-kiwi/40 shadow-lg shadow-kiwi/5"
-                        : "bg-black/50 border-slate-900 hover:bg-slate-900/30 hover:border-slate-800"
+                        ? "bg-slate-300/40 dark:bg-slate-900/80 border-kiwi/40 shadow-lg shadow-kiwi/5"
+                        : "bg-card/40 dark:bg-black/50 border-slate-300 dark:border-slate-900 hover:bg-card/70 dark:hover:bg-slate-900/30 hover:border-slate-400 dark:hover:border-slate-800"
                     }`}
                   >
                     {/* Glowing vertical slider on selected */}
@@ -478,7 +526,7 @@ export default function MainPage() {
                     )}
                     
                     <div className="flex items-start justify-between gap-2">
-                      <span className={`text-[11px] font-mono font-bold truncate ${isSelected ? "text-kiwi" : "text-slate-300"}`}>
+                      <span className={`text-[11px] font-mono font-bold truncate ${isSelected ? "text-kiwi" : "text-slate-700 dark:text-slate-300"}`}>
                         {run.task}
                       </span>
                       <Badge
@@ -487,7 +535,7 @@ export default function MainPage() {
                           run.status === "complete"
                             ? "text-kiwi bg-kiwi/10"
                             : run.status === "error"
-                            ? "text-rose-400 bg-rose-950/20"
+                            ? "bg-rose-600 text-white dark:bg-rose-950/20 dark:text-rose-400"
                             : "text-tangy bg-tangy/10 animate-pulse"
                         }`}
                       >
@@ -495,20 +543,20 @@ export default function MainPage() {
                       </Badge>
                     </div>
                     
-                    <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono">
+                    <div className="flex items-center justify-between text-[9px] text-slate-600 dark:text-slate-500 font-mono">
                       <span>{dateStr}</span>
                       <div className="flex items-center gap-2">
                         <span>STEPS: {run.step_count}</span>
                         <button
                           onClick={(e) => handleDeleteRun(e, run.id)}
-                          className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-500 transition duration-150 p-0.5"
+                          className="opacity-0 group-hover:opacity-100 text-slate-600 dark:text-slate-500 hover:text-rose-500 transition duration-150 p-0.5"
                           title="Delete run"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })
             )}
@@ -517,14 +565,14 @@ export default function MainPage() {
       </aside>
 
       {/* 2. Main Content Frame */}
-      <main className="flex-1 flex flex-col h-full bg-black overflow-hidden relative z-20">
+      <main className="flex-1 flex flex-col h-full bg-background dark:bg-black overflow-hidden relative z-20">
         
         {/* Main Header */}
-        <header className="px-6 py-4 border-b border-slate-900 bg-black flex items-center justify-between relative">
+        <header className="px-6 py-4 border-b border-slate-300 dark:border-slate-900 bg-background dark:bg-black flex items-center justify-between relative">
           
           {/* Intersection marks */}
-          <span className="absolute bottom-[-5px] left-[-5px] text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
-          <span className="absolute bottom-[-5px] right-[-5px] text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
+          <span className="absolute bottom-[-5px] left-[-5px] text-slate-300 dark:text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
+          <span className="absolute bottom-[-5px] right-[-5px] text-slate-300 dark:text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
 
           <div className="flex items-center gap-3">
             <Button
@@ -532,41 +580,95 @@ export default function MainPage() {
               variant="outline"
               onClick={() => { handleClickSound(); setSidebarOpen(!sidebarOpen); }}
               onMouseEnter={handleHoverSound}
-              className="w-8 h-8 rounded-lg border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white"
+              className="w-8 h-8 rounded-lg border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
               title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             >
               {sidebarOpen ? (
-                <PanelLeftClose className="w-4 h-4" />
+                <PanelLeftClose className="w-4 h-4 text-slate-600 dark:text-slate-400" />
               ) : (
                 <PanelLeftOpen className="w-4 h-4 text-kiwi" />
               )}
             </Button>
             
-            <Separator orientation="vertical" className="h-4 bg-slate-800/60" />
+            <Separator orientation="vertical" className="h-4 bg-slate-200 dark:bg-slate-800/60" />
 
             <Cpu className="w-5 h-5 text-kiwi filter drop-shadow-[0_0_8px_rgba(204,255,0,0.3)]" />
             <div>
-              <h2 className="text-xs font-bold text-white tracking-widest font-mono">
+              <h2 className="text-xs font-bold text-slate-900 dark:text-white tracking-widest font-mono">
                 <ScrambledText text="Hive — Multi-Agent AI System" delay={400} />
               </h2>
-              <p className="text-[10px] text-slate-500 font-mono">Supervisor · Researcher · Coder · Writer · Critic</p>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-mono">Supervisor · Researcher · Coder · Writer · Critic</p>
             </div>
           </div>
 
-          {/* Sound Mute Control & DB ID */}
+          {/* Settings Control */}
           <div className="flex items-center gap-4">
-            {/* Audio Toggle Switch */}
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={handleToggleSound}
-              onMouseEnter={handleHoverSound}
-              className={`w-8 h-8 rounded-lg border-slate-800 hover:bg-slate-900 ${soundEnabled ? "text-kiwi border-kiwi/20" : "text-slate-500"}`}
-              title={soundEnabled ? "Mute audio" : "Unmute audio"}
-            >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </Button>
+            <div className="relative" ref={settingsRef}>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => { handleClickSound(); setSettingsOpen(!settingsOpen); }}
+                onMouseEnter={handleHoverSound}
+                className={`w-8 h-8 rounded-lg border-slate-300 dark:border-slate-800 hover:bg-slate-300/40 dark:hover:bg-slate-900 ${settingsOpen ? "text-kiwi border-kiwi/30 bg-slate-105 dark:bg-slate-900" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"}`}
+                title="System settings"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+              
+              {settingsOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-popover/95 dark:bg-slate-950/95 border border-slate-300 dark:border-slate-850 rounded-xl p-4 shadow-2xl z-50 backdrop-blur-md flex flex-col gap-4 font-mono text-[11px] glow-border-kiwi animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-900 pb-2">
+                    <span className="text-kiwi font-bold tracking-widest uppercase">System Config</span>
+                    <button 
+                      className="h-4 w-4 text-slate-600 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white text-[10px] flex items-center justify-center font-bold" 
+                      onClick={() => setSettingsOpen(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  {/* Toggle 1: Sound */}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-slate-700 dark:text-slate-200 font-semibold">Audio Feedback</span>
+                      <span className="text-[9px] text-slate-600 dark:text-slate-400">Enable UI soundscapes</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleToggleSound}
+                      className={`h-7 px-3 text-[10px] rounded-lg border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 ${soundEnabled ? "text-kiwi border-kiwi/30 bg-kiwi/10" : "text-slate-600 dark:text-slate-400"}`}
+                    >
+                      {soundEnabled ? "ON" : "OFF"}
+                    </Button>
+                  </div>
 
+                  {/* Toggle 2: Theme */}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-slate-700 dark:text-slate-200 font-semibold">System Theme</span>
+                      <span className="text-[9px] text-slate-600 dark:text-slate-400">Toggle light / dark mode</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={toggleTheme}
+                      className={`h-7 px-3 text-[10px] rounded-lg border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center gap-1.5 ${isDarkMode ? "text-slate-600 dark:text-slate-300" : "text-kiwi border-kiwi/30 bg-kiwi/10"}`}
+                    >
+                      {isDarkMode ? (
+                        <>
+                          <Moon className="w-3.5 h-3.5" /> DARK
+                        </>
+                      ) : (
+                        <>
+                          <Sun className="w-3.5 h-3.5 text-kiwi animate-spin-slow" /> LIGHT
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -575,18 +677,18 @@ export default function MainPage() {
           
           {/* A. Task Entry Area (Show only if no active/selected run) */}
           {!selectedRunId && (
-            <Card className="border-slate-900 bg-black/40 shadow-2xl relative overflow-hidden backdrop-blur-md glow-border-kiwi">
+            <Card className="border-slate-300 dark:border-slate-900 bg-card/80 dark:bg-black/40 shadow-2xl relative overflow-hidden backdrop-blur-md glow-border-kiwi">
               <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-kiwi/40 to-transparent" />
               
               <CardHeader>
                 <CardTitle className="text-xs font-mono text-kiwi tracking-widest flex items-center gap-2">
                   <Crosshair className="w-4 h-4" /> <ScrambledText text="What do you want to accomplish?" delay={200} />
                 </CardTitle>
-                <CardDescription className="text-[10px] text-slate-500 font-mono">
+                <CardDescription className="text-[10px] text-slate-600 dark:text-slate-400 font-mono">
                   Describe your goal. Hive's agents will research, write code, and deliver a complete answer together.
                 </CardDescription>
               </CardHeader>
-              <form onSubmit={handleStartRun}>
+              <form onSubmit={handleStartRun} className="flex flex-col gap-3">
                 <CardContent className="space-y-4">
                   <Textarea
                     placeholder='e.g. "Research the top AI frameworks in 2026 and write a comparison with code examples"'
@@ -601,20 +703,20 @@ export default function MainPage() {
                           // Plain Enter submits the form
                           e.preventDefault();
                           if (taskInput.trim() && !isSubmitting && backendHealth === "online") {
-                            const form = e.currentTarget.form;
-                            if (form) {
-                              form.requestSubmit();
-                            }
+                             const form = e.currentTarget.form;
+                             if (form) {
+                               form.requestSubmit();
+                             }
                           }
                         }
                       }
                     }}
                     required
-                    className="min-h-[110px] bg-slate-900 border-slate-800 text-xs font-mono text-slate-300 placeholder:text-slate-600 focus-visible:ring-kiwi rounded-xl"
+                    className="min-h-[110px] bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-300 placeholder:text-slate-500 dark:placeholder:text-slate-600 focus-visible:ring-kiwi rounded-xl"
                   />
                 </CardContent>
-                <CardFooter className="flex justify-between border-t border-slate-900/60 pt-4 bg-black/30">
-                  <div className="text-[9px] text-slate-500 flex items-center gap-1.5 font-mono">
+                <CardFooter className="flex justify-between border-t border-slate-200 dark:border-slate-900/60 p-4 bg-slate-50/50 dark:bg-black/30">
+                  <div className="text-[9px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-mono">
                     <Lock className="w-3.5 h-3.5 text-kiwi" /> Powered by Groq · Tavily · E2B
                   </div>
                   <Button
@@ -637,7 +739,7 @@ export default function MainPage() {
               {/* Left Column: Visualizers */}
               <div className="lg:col-span-5 space-y-6">
                 <div>
-                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-slate-500 font-bold mb-2 flex items-center gap-1">
+                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-slate-600 dark:text-slate-400 font-bold mb-2 flex items-center gap-1">
                     <Crosshair className="w-3.5 h-3.5" /> Topology Network Mapping
                   </h3>
                   <AgentGraph currentAgent={socket.currentAgent} status={socket.status} />
@@ -659,14 +761,14 @@ export default function MainPage() {
               <div className="lg:col-span-7 flex flex-col space-y-4">
                 
                 {/* Tabs Selector */}
-                <div className="flex border-b border-slate-900">
+                <div className="flex border-b border-slate-200 dark:border-slate-900">
                   <button
                     onClick={() => { handleClickSound(); setActiveTab("terminal"); }}
                     onMouseEnter={handleHoverSound}
                     className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${
                       activeTab === "terminal"
                         ? "text-kiwi border-kiwi"
-                        : "text-slate-500 border-transparent hover:text-slate-400"
+                        : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     <Terminal className="w-3.5 h-3.5" /> LIVE CONSOLE FEED
@@ -677,7 +779,7 @@ export default function MainPage() {
                     className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${
                       activeTab === "draft"
                         ? "text-kiwi border-kiwi"
-                        : "text-slate-500 border-transparent hover:text-slate-400"
+                        : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     <FileCode2 className="w-3.5 h-3.5" /> COMPILED REPORT

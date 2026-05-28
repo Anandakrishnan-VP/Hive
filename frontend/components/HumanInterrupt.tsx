@@ -54,14 +54,14 @@ export function HumanInterrupt({ runId, status, onInterrupted }: HumanInterruptP
   const isEnabled = status === "running" && !!runId;
 
   return (
-    <div className="border border-slate-800 rounded-xl bg-black/80 p-5 shadow-2xl backdrop-blur-md">
+    <div className="border border-slate-300 dark:border-slate-800 rounded-xl bg-card dark:bg-black/80 p-5 shadow-2xl backdrop-blur-md">
       <div className="flex items-center gap-2 mb-3.5">
         <div className="p-1.5 bg-kiwi/15 rounded-lg text-kiwi">
           <MessageSquareCode className="w-4 h-4" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-white">Human-in-the-Loop Steering</h3>
-          <p className="text-[11px] text-slate-500">Inject guidelines to override supervisor plan mid-run</p>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Human-in-the-Loop Steering</h3>
+          <p className="text-[11px] text-slate-600 dark:text-slate-400">Inject guidelines to override supervisor plan mid-run</p>
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export function HumanInterrupt({ runId, status, onInterrupted }: HumanInterruptP
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
           disabled={!isEnabled || loading}
-          className="min-h-[70px] bg-slate-900 border-slate-800 text-xs text-slate-300 placeholder:text-slate-600 focus-visible:ring-kiwi"
+          className="min-h-[70px] bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-300 placeholder:text-slate-500 dark:placeholder:text-slate-600 focus-visible:ring-kiwi"
         />
         <Button
           type="submit"

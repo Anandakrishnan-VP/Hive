@@ -67,21 +67,22 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
       (currentAgent === fromNodeId && status === "running") ||
       (currentAgent === toNodeId && status === "running");
     return {
-      stroke: isFlowing ? "#CCFF00" : "#262626",
       strokeWidth: isFlowing ? 2.5 : 1.5,
       strokeDasharray: isFlowing ? "5, 5" : "none",
-      className: isFlowing ? "animate-[dash_1s_linear_infinite]" : "",
+      className: isFlowing 
+        ? "stroke-kiwi animate-[dash_1s_linear_infinite]" 
+        : "stroke-slate-400 dark:stroke-slate-900",
     };
   };
 
   return (
-    <div className="relative w-full h-[360px] bg-black/80 border border-slate-900 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
+    <div className="relative w-full h-[360px] bg-card dark:bg-black/80 border border-slate-300 dark:border-slate-900 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
       {/* SVG Canvas for Connections */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none">
         <defs>
           <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#CCFF00" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#CCFF00" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--kiwi-color)" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="var(--kiwi-color)" stopOpacity="0" />
           </radialGradient>
           <style>{`
             @keyframes dash {
@@ -127,8 +128,8 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
           <div
             className={`w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-lg transition-all duration-300 ${
               node.active
-                ? "bg-kiwi border-tangy text-slate-950 scale-110 shadow-kiwi/30"
-                : "bg-black border-slate-800 text-slate-400 hover:border-slate-700"
+                ? "bg-kiwi border-white dark:border-black text-slate-950 scale-110 shadow-kiwi/30"
+                : "bg-card dark:bg-black border-slate-350 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-700"
             }`}
           >
             {node.id === "supervisor" && status === "running" && !node.active ? (
@@ -143,7 +144,7 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
             className={`mt-2 text-xs font-semibold px-2 py-0.5 rounded transition-all duration-300 ${
               node.active
                 ? "text-kiwi bg-kiwi/5 border border-kiwi/20"
-                : "text-slate-400"
+                : "text-slate-600 dark:text-slate-400"
             }`}
           >
             {node.label}
@@ -152,7 +153,7 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
       ))}
 
       {/* Status Bar */}
-      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-slate-500">
+      <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
         <div className="flex items-center gap-1.5">
           <span
             className={`w-2 h-2 rounded-full ${

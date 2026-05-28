@@ -6,6 +6,9 @@ Build a production-grade Multi-Agent AI System(Hive) where a Supervisor agent or
 tasks autonomously. Users give a natural language goal and watch agents collaborate
 in real time via a live trace UI.
 
+**Github link**
+https://github.com/Anandakrishnan-VP/Hive
+
 **Live demo will show:**
 - User types: "Research the top AI frameworks in 2026 and write a blog post with code examples"
 - System: Supervisor plans → Researcher searches web → Coder writes + runs code →

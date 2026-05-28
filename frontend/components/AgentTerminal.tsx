@@ -170,33 +170,34 @@ export function AgentTerminal({ events }: AgentTerminalProps) {
   };
 
   return (
-    <div className="flex flex-col h-[460px] bg-black border border-kiwi/15 rounded-xl overflow-hidden shadow-2xl relative">
-      
-      {/* Terminal Title Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-900 select-none">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-          <span className="ml-2.5 text-xs text-slate-400 font-semibold font-mono tracking-wider">hive-core@terminal:~</span>
-        </div>
-        <div className="text-[9px] text-kiwi font-mono font-bold tracking-widest flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-kiwi animate-ping" />
-          STREAMING DATA
-        </div>
-      </div>
-
-      {/* Terminal Logs Area */}
-      <div className="flex-1 overflow-y-auto p-5 font-mono text-xs leading-relaxed space-y-3.5 scrollbar-thin scrollbar-thumb-slate-800">
-        {events.length === 0 ? (
-          <div className="text-slate-600 italic h-full flex flex-col gap-2 items-center justify-center font-mono select-none">
-            <Terminal className="w-7 h-7 text-slate-700 animate-pulse" />
-            <span>CONSOLE IDLE. DEPLOY PROMPT TO STREAM EVENTS</span>
+    <div className="flex flex-col h-[460px] bg-black border border-slate-300 dark:border-kiwi/15 rounded-xl overflow-hidden shadow-2xl relative">
+      <div className="dark flex flex-col h-full w-full">
+        {/* Terminal Title Bar */}
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-950 select-none">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+            <span className="ml-2.5 text-xs text-slate-400 font-semibold font-mono tracking-wider">hive-core@terminal:~</span>
           </div>
-        ) : (
-          events.map((event, idx) => renderEventContent(event, idx))
-        )}
-        <div ref={terminalEndRef} />
+          <div className="text-[9px] text-kiwi font-mono font-bold tracking-widest flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-kiwi animate-ping" />
+            STREAMING DATA
+          </div>
+        </div>
+
+        {/* Terminal Logs Area */}
+        <div className="flex-1 overflow-y-auto p-5 font-mono text-xs leading-relaxed space-y-3.5 scrollbar-thin scrollbar-thumb-slate-800">
+          {events.length === 0 ? (
+            <div className="text-slate-600 italic h-full flex flex-col gap-2 items-center justify-center font-mono select-none">
+              <Terminal className="w-7 h-7 text-slate-700 animate-pulse" />
+              <span>CONSOLE IDLE. DEPLOY PROMPT TO STREAM EVENTS</span>
+            </div>
+          ) : (
+            events.map((event, idx) => renderEventContent(event, idx))
+          )}
+          <div ref={terminalEndRef} />
+        </div>
       </div>
     </div>
   );
