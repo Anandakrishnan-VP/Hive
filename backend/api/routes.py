@@ -100,8 +100,12 @@ def interrupt_run(run_id: str, req: InterruptRequest, db: Session = Depends(get_
         current_state = graph.get_state(config)
         agent_outputs = dict(current_state.values.get("agent_outputs", {}))
         
-        # Inject the human feedback into the supervisor instruction
-        agent_outputs["supervisor_instruction"] = req.instruction
+        # Store in the out-of-band feedback store so it is picked up immediately
+        from backend.agents.feedback_store import store_feedback
+        store_feedback(run_id, req.instruction)
+
+        # Inject the human feedback into a dedicated state field
+        agent_outputs["human_feedback"] = req.instruction
         agent_outputs["critic_retries"] = "0"  # Reset loop count on user interruption to allow more edits
         
         # Update graph state

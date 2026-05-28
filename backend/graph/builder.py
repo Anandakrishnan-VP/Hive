@@ -26,8 +26,30 @@ def route_next(state: AgentState) -> str:
         
     return END
 
-def critic_gate(state: AgentState) -> str:
+from langchain_core.runnables import RunnableConfig
+
+def critic_gate(state: AgentState, config: RunnableConfig = None) -> str:
     """Evaluates the critic's output and determines if we should loop or finish."""
+    from backend.agents.feedback_store import log_debug
+    log_debug(f"critic_gate: executing. config is: {config}")
+    run_id = None
+    if config:
+        if hasattr(config, "get"):
+            run_id = config.get("configurable", {}).get("thread_id")
+        elif hasattr(config, "configurable"):
+            run_id = getattr(config, "configurable", {}).get("thread_id")
+            
+    log_debug(f"critic_gate: resolved run_id is: {run_id}")
+    if run_id:
+        try:
+            from backend.agents.feedback_store import peek_feedback
+            feedback = peek_feedback(run_id)
+            log_debug(f"critic_gate: peeked feedback is: {feedback}")
+            if feedback:
+                return "supervisor"
+        except Exception as e:
+            log_debug(f"critic_gate: error peeking feedback: {e}")
+
     # Safety gate
     if state.get("step_count", 0) >= settings.MAX_STEPS:
         return END
@@ -89,6 +111,7 @@ def compile_graph():
         critic_gate,
         {
             "writer": "writer",
+            "supervisor": "supervisor",
             END: END
         }
     )

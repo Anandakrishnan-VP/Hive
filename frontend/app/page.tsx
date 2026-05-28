@@ -15,13 +15,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { 
-  Play, 
-  RotateCw, 
-  Layers, 
-  Server, 
-  Cpu, 
-  History, 
+import {
+  Play,
+  RotateCw,
+  Layers,
+  Server,
+  Cpu,
+  History,
   Plus,
   Terminal,
   FileCode2,
@@ -36,7 +36,13 @@ import {
   Trash2,
   Settings,
   Sun,
-  Moon
+  Moon,
+  GitCompare,
+  TrendingUp,
+  Coins,
+  Bug,
+  Target,
+  BookOpen
 } from "lucide-react";
 
 interface DBRun {
@@ -59,7 +65,7 @@ function ScrambledText({ text, delay = 0 }: { text: string; delay?: number }) {
   useEffect(() => {
     const chars = "[]<>//_!@#$%^&*()_+{}:|?";
     let iterations = 0;
-    
+
     timerRef.current = setTimeout(() => {
       intervalRef.current = setInterval(() => {
         setDisplayText(
@@ -74,7 +80,7 @@ function ScrambledText({ text, delay = 0 }: { text: string; delay?: number }) {
             })
             .join("")
         );
-        
+
         if (iterations >= text.length) {
           if (intervalRef.current) clearInterval(intervalRef.current);
         }
@@ -91,6 +97,39 @@ function ScrambledText({ text, delay = 0 }: { text: string; delay?: number }) {
   return <span>{displayText || "..."}</span>;
 }
 
+const PRESET_USE_CASES = [
+  {
+    title: "Compare two technologies",
+    prompt: "Compare Next.js vs Remix for a startup in 2026",
+    icon: GitCompare,
+  },
+  {
+    title: "Market analysis",
+    prompt: "Analyze SWE job market in Bangalore vs Hyderabad",
+    icon: TrendingUp,
+  },
+  {
+    title: "Investment research",
+    prompt: "Research Nvidia stock — buy, hold, or sell right now?",
+    icon: Coins,
+  },
+  {
+    title: "Debug my code",
+    prompt: "Debug this Python function and explain what's wrong: [paste]",
+    icon: Bug,
+  },
+  {
+    title: "Competitive analysis",
+    prompt: "Compare Notion vs Linear for a dev team of 5",
+    icon: Target,
+  },
+  {
+    title: "Learn a topic",
+    prompt: "Explain RAG architecture with a working Python example",
+    icon: BookOpen,
+  },
+];
+
 export default function MainPage() {
   const [taskInput, setTaskInput] = useState("");
   const [runs, setRuns] = useState<DBRun[]>([]);
@@ -98,7 +137,7 @@ export default function MainPage() {
   const [backendHealth, setBackendHealth] = useState<"online" | "offline" | "checking">("checking");
   const [activeTab, setActiveTab] = useState<"terminal" | "draft">("terminal");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Audio Mute State
   const [soundEnabled, setSoundEnabled] = useState(true);
 
@@ -223,7 +262,7 @@ export default function MainPage() {
     const timer = setInterval(() => {
       setBootProgress((prev) => {
         const next = prev + 1;
-        
+
         // Dynamic logs feeding
         if (next === 5) setBootLogs([logsTemplate[0]]);
         if (next === 20) setBootLogs((prev) => [...prev, logsTemplate[1]]);
@@ -263,7 +302,7 @@ export default function MainPage() {
     handleClickSound();
     setSelectedRunId(run.id);
     socket.reset();
-    
+
     if (run.status === "running") {
       socket.connect(run.id);
       setActiveTab("terminal");
@@ -299,18 +338,18 @@ export default function MainPage() {
 
       const data = await res.json();
       const newRunId = data.run_id;
-      
+
       toast.success("Task Submitted!", {
         description: "Agent execution started in background.",
       });
 
       setTaskInput("");
       setSelectedRunId(newRunId);
-      
+
       // Connect to WS immediately to listen to events
       socket.connect(newRunId);
       setActiveTab("terminal");
-      
+
       // Refresh list immediately
       await fetchRuns(true);
     } catch (err: any) {
@@ -336,14 +375,14 @@ export default function MainPage() {
   const handleDeleteRun = async (e: React.MouseEvent, runId: string) => {
     e.stopPropagation();
     handleClickSound();
-    
+
     const previousRuns = [...runs];
     setRuns((prev) => prev.filter((r) => r.id !== runId));
     if (selectedRunId === runId) {
       setSelectedRunId(null);
       socket.reset();
     }
-    
+
     try {
       const res = await fetch(`${apiUrl}/api/runs/${runId}`, {
         method: "DELETE",
@@ -366,29 +405,28 @@ export default function MainPage() {
 
   if (showBootLoader) {
     return (
-      <div 
-        className={`fixed inset-0 bg-black z-50 select-none transition-all duration-500 ${
-          bootFinished ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
-        }`}
+      <div
+        className={`fixed inset-0 bg-black z-50 select-none transition-all duration-500 ${bootFinished ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"
+          }`}
       >
         {/* Background Grid */}
         <div className="absolute inset-0 hud-grid opacity-15 pointer-events-none z-0" />
-        
+
         {/* Background Scanlines */}
         <div className="absolute inset-0 hud-scanline pointer-events-none z-1" />
 
         {/* Glow sweeps */}
         <div className="absolute w-[600px] h-[600px] bg-kiwi/5 rounded-full blur-[120px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none" />
-        
+
         {/* Foreground Content Container - Flex Layout */}
         <div className="absolute inset-0 flex flex-col items-center justify-between z-10 py-16">
           {/* Top spacer to balance the layout and force logo to vertical center */}
           <div className="flex-1" />
-          
+
           {/* Main centered container for the logo and project name */}
           <div className="flex-shrink-0 flex flex-col items-center justify-center my-4">
             <Logo className="w-56 h-auto text-kiwi" />
-            
+
             {/* Project Name Header with Sci-Fi HUD style */}
             <div className="mt-8 flex flex-col items-center select-none">
               <h1 className="text-4xl font-extrabold tracking-[0.4em] text-white font-mono pl-[0.4em] glow-text-kiwi animate-[pulse_3s_infinite] transition-all duration-300">
@@ -440,15 +478,14 @@ export default function MainPage() {
   return (
     <div className="flex flex-1 overflow-hidden h-screen bg-background dark:bg-black font-sans select-none relative text-slate-800 dark:text-slate-100">
       <div className="absolute inset-0 hud-grid opacity-[0.03] dark:opacity-10 pointer-events-none" />
-      
+
       {/* Visual scanning line */}
       <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-kiwi/5 to-transparent animate-sweep-bar pointer-events-none z-10" />
- 
+
       {/* 1. Sidebar - Run History */}
-      <aside 
-        className={`bg-sidebar dark:bg-black flex flex-col h-full flex-shrink-0 relative z-20 border-r border-slate-300 dark:border-slate-900/60 transition-all duration-300 ease-in-out overflow-hidden ${
-          sidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 border-r-0 pointer-events-none"
-        }`}
+      <aside
+        className={`bg-sidebar dark:bg-black flex flex-col h-full flex-shrink-0 relative z-20 border-r border-slate-300 dark:border-slate-900/60 transition-all duration-300 ease-in-out overflow-hidden ${sidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 border-r-0 pointer-events-none"
+          }`}
       >
         <div className="w-80 h-full flex flex-col flex-shrink-0 relative">
           {/* Sidebar Header */}
@@ -478,13 +515,13 @@ export default function MainPage() {
               <Plus className="w-4 h-4" />
             </Button>
           </div>
- 
+
           {/* Sidebar Navigation */}
           <div className="p-3 border-b border-slate-200 dark:border-slate-900/60 bg-slate-100/50 dark:bg-black/20">
             <div className="text-[10px] uppercase tracking-widest text-slate-500 font-mono font-bold px-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5"><History className="w-3.5 h-3.5" /> <ScrambledText text="TASK ARCHIVES" delay={200} /></span>
-              <button 
-                onClick={() => { handleClickSound(); fetchRuns(); }} 
+              <button
+                onClick={() => { handleClickSound(); fetchRuns(); }}
                 onMouseEnter={handleHoverSound}
                 className="hover:text-slate-900 dark:hover:text-white transition"
               >
@@ -492,9 +529,9 @@ export default function MainPage() {
               </button>
             </div>
           </div>
- 
+
           {/* History List */}
-          <ScrollArea className="flex-1 p-2 space-y-1.5">
+          <div className="flex-1 overflow-y-auto p-2 pr-3 space-y-2 custom-scrollbar">
             {runs.length === 0 ? (
               <div className="text-center py-10 text-xs text-slate-700 font-mono">
                 No previous runs. Submit your first prompt.
@@ -508,41 +545,39 @@ export default function MainPage() {
                   hour: "2-digit",
                   minute: "2-digit"
                 });
- 
+
                 return (
                   <div
                     key={run.id}
                     onClick={() => handleSelectRun(run)}
                     onMouseEnter={handleHoverSound}
-                    className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1.5 mb-2 relative overflow-hidden group cursor-pointer ${
-                      isSelected
-                        ? "bg-slate-300/40 dark:bg-slate-900/80 border-kiwi/40 shadow-lg shadow-kiwi/5"
-                        : "bg-card/40 dark:bg-black/50 border-slate-300 dark:border-slate-900 hover:bg-card/70 dark:hover:bg-slate-900/30 hover:border-slate-400 dark:hover:border-slate-800"
-                    }`}
+                    className={`w-full text-left p-3 rounded-xl border transition-all flex flex-col gap-1.5 mb-2 relative overflow-hidden group cursor-pointer ${isSelected
+                      ? "bg-slate-300/40 dark:bg-slate-900/80 border-kiwi/40 shadow-lg shadow-kiwi/5"
+                      : "bg-card/40 dark:bg-black/50 border-slate-300 dark:border-slate-900 hover:bg-card/70 dark:hover:bg-slate-900/30 hover:border-slate-400 dark:hover:border-slate-800"
+                      }`}
                   >
                     {/* Glowing vertical slider on selected */}
                     {isSelected && (
                       <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-kiwi" />
                     )}
-                    
+
                     <div className="flex items-start justify-between gap-2">
                       <span className={`text-[11px] font-mono font-bold truncate ${isSelected ? "text-kiwi" : "text-slate-700 dark:text-slate-300"}`}>
                         {run.task}
                       </span>
                       <Badge
                         variant="outline"
-                        className={`text-[8px] px-1.5 py-0 font-mono capitalize border-0 ${
-                          run.status === "complete"
-                            ? "text-kiwi bg-kiwi/10"
-                            : run.status === "error"
+                        className={`text-[8px] px-1.5 py-0 font-mono capitalize border-0 ${run.status === "complete"
+                          ? "text-kiwi bg-kiwi/10"
+                          : run.status === "error"
                             ? "bg-rose-600 text-white dark:bg-rose-950/20 dark:text-rose-400"
                             : "text-tangy bg-tangy/10 animate-pulse"
-                        }`}
+                          }`}
                       >
                         {run.status}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex items-center justify-between text-[9px] text-slate-600 dark:text-slate-500 font-mono">
                       <span>{dateStr}</span>
                       <div className="flex items-center gap-2">
@@ -560,16 +595,16 @@ export default function MainPage() {
                 );
               })
             )}
-          </ScrollArea>
+          </div>
         </div>
       </aside>
 
       {/* 2. Main Content Frame */}
       <main className="flex-1 flex flex-col h-full bg-background dark:bg-black overflow-hidden relative z-20">
-        
+
         {/* Main Header */}
         <header className="px-6 py-4 border-b border-slate-300 dark:border-slate-900 bg-background dark:bg-black flex items-center justify-between relative">
-          
+
           {/* Intersection marks */}
           <span className="absolute bottom-[-5px] left-[-5px] text-slate-300 dark:text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
           <span className="absolute bottom-[-5px] right-[-5px] text-slate-300 dark:text-slate-700 font-mono font-bold text-xs select-none pointer-events-none">+</span>
@@ -589,7 +624,7 @@ export default function MainPage() {
                 <PanelLeftOpen className="w-4 h-4 text-kiwi" />
               )}
             </Button>
-            
+
             <Separator orientation="vertical" className="h-4 bg-slate-200 dark:bg-slate-800/60" />
 
             <Cpu className="w-5 h-5 text-kiwi filter drop-shadow-[0_0_8px_rgba(204,255,0,0.3)]" />
@@ -614,19 +649,19 @@ export default function MainPage() {
               >
                 <Settings className="w-4 h-4" />
               </Button>
-              
+
               {settingsOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-popover/95 dark:bg-slate-950/95 border border-slate-300 dark:border-slate-850 rounded-xl p-4 shadow-2xl z-50 backdrop-blur-md flex flex-col gap-4 font-mono text-[11px] glow-border-kiwi animate-in fade-in slide-in-from-top-1 duration-200">
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-900 pb-2">
                     <span className="text-kiwi font-bold tracking-widest uppercase">System Config</span>
-                    <button 
-                      className="h-4 w-4 text-slate-600 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white text-[10px] flex items-center justify-center font-bold" 
+                    <button
+                      className="h-4 w-4 text-slate-600 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white text-[10px] flex items-center justify-center font-bold"
                       onClick={() => setSettingsOpen(false)}
                     >
                       ✕
                     </button>
                   </div>
-                  
+
                   {/* Toggle 1: Sound */}
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col gap-0.5">
@@ -673,130 +708,182 @@ export default function MainPage() {
         </header>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
-          
+        <div className="flex-1 overflow-hidden p-6 flex flex-col justify-between">
+
           {/* A. Task Entry Area (Show only if no active/selected run) */}
           {!selectedRunId && (
-            <Card className="border-slate-300 dark:border-slate-900 bg-card/80 dark:bg-black/40 shadow-2xl relative overflow-hidden backdrop-blur-md glow-border-kiwi">
-              <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-kiwi/40 to-transparent" />
-              
-              <CardHeader>
-                <CardTitle className="text-xs font-mono text-kiwi tracking-widest flex items-center gap-2">
-                  <Crosshair className="w-4 h-4" /> <ScrambledText text="What do you want to accomplish?" delay={200} />
-                </CardTitle>
-                <CardDescription className="text-[10px] text-slate-600 dark:text-slate-400 font-mono">
-                  Describe your goal. Hive's agents will research, write code, and deliver a complete answer together.
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleStartRun} className="flex flex-col gap-3">
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder='e.g. "Research the top AI frameworks in 2026 and write a comparison with code examples"'
-                    value={taskInput}
-                    onChange={(e) => setTaskInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        if (e.ctrlKey || e.shiftKey) {
-                          // Ctrl+Enter or Shift+Enter inserts a new line (default behavior)
-                          return;
-                        } else {
-                          // Plain Enter submits the form
-                          e.preventDefault();
-                          if (taskInput.trim() && !isSubmitting && backendHealth === "online") {
-                             const form = e.currentTarget.form;
-                             if (form) {
-                               form.requestSubmit();
-                             }
+            <div className="flex-1 overflow-y-auto pr-1 scrollbar-none">
+              <Card className="border-slate-300 dark:border-slate-900 bg-card/80 dark:bg-black/40 shadow-2xl relative overflow-hidden backdrop-blur-md glow-border-kiwi">
+                <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-kiwi/40 to-transparent" />
+
+                <CardHeader>
+                  <CardTitle className="text-xs font-mono text-kiwi tracking-widest flex items-center gap-2">
+                    <Crosshair className="w-4 h-4" /> <ScrambledText text="What do you want to accomplish?" delay={200} />
+                  </CardTitle>
+                  <CardDescription className="text-[10px] text-slate-600 dark:text-slate-400 font-mono">
+                    Describe your goal. Hive's agents will research, write code, and deliver a complete answer together.
+                  </CardDescription>
+                </CardHeader>
+                <form onSubmit={handleStartRun} className="flex flex-col gap-3">
+                  <CardContent className="space-y-4">
+                    <Textarea
+                      placeholder='e.g. "Research the top AI frameworks in 2026 and write a comparison with code examples"'
+                      value={taskInput}
+                      onChange={(e) => setTaskInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          if (e.ctrlKey || e.shiftKey) {
+                            // Ctrl+Enter or Shift+Enter inserts a new line (default behavior)
+                            return;
+                          } else {
+                            // Plain Enter submits the form
+                            e.preventDefault();
+                            if (taskInput.trim() && !isSubmitting && backendHealth === "online") {
+                              const form = e.currentTarget.form;
+                              if (form) {
+                                form.requestSubmit();
+                              }
+                            }
                           }
                         }
-                      }
-                    }}
-                    required
-                    className="min-h-[110px] bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-300 placeholder:text-slate-500 dark:placeholder:text-slate-600 focus-visible:ring-kiwi rounded-xl"
-                  />
-                </CardContent>
-                <CardFooter className="flex justify-between border-t border-slate-200 dark:border-slate-900/60 p-4 bg-slate-50/50 dark:bg-black/30">
-                  <div className="text-[9px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-mono">
-                    <Lock className="w-3.5 h-3.5 text-kiwi" /> Powered by Groq · Tavily · E2B
-                  </div>
-                  <Button
-                    type="submit"
-                    onMouseEnter={handleHoverSound}
-                    disabled={!taskInput.trim() || isSubmitting || backendHealth !== "online"}
-                    className="bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold font-mono text-[10px] tracking-widest py-2 px-5 rounded-lg flex items-center gap-1.5 transition shadow-lg shadow-kiwi/15"
-                  >
-                    Run Agents
-                  </Button>
-                </CardFooter>
-              </form>
-            </Card>
-          )}
+                      }}
+                      required
+                      className="min-h-[110px] bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-300 placeholder:text-slate-500 dark:placeholder:text-slate-600 focus-visible:ring-kiwi rounded-xl"
+                    />
 
-          {/* B. Active Execution Control Hub (Show if active/selected run exists) */}
-          {selectedRunId && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              
-              {/* Left Column: Visualizers */}
-              <div className="lg:col-span-5 space-y-6">
-                <div>
-                  <h3 className="text-[10px] font-mono uppercase tracking-widest text-slate-600 dark:text-slate-400 font-bold mb-2 flex items-center gap-1">
-                    <Crosshair className="w-3.5 h-3.5" /> Topology Network Mapping
-                  </h3>
-                  <AgentGraph currentAgent={socket.currentAgent} status={socket.status} />
-                </div>
-
-                <HumanInterrupt 
-                  runId={selectedRunId} 
-                  status={socket.status} 
-                  onInterrupted={() => {
-                    handleClickSound();
-                    socket.setCurrentAgent("supervisor");
-                    socket.setStatus("running");
-                    fetchRuns(true);
-                  }}
-                />
-              </div>
-
-              {/* Right Column: Console Details */}
-              <div className="lg:col-span-7 flex flex-col space-y-4">
-                
-                {/* Tabs Selector */}
-                <div className="flex border-b border-slate-200 dark:border-slate-900">
-                  <button
-                    onClick={() => { handleClickSound(); setActiveTab("terminal"); }}
-                    onMouseEnter={handleHoverSound}
-                    className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${
-                      activeTab === "terminal"
-                        ? "text-kiwi border-kiwi"
-                        : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
-                    }`}
-                  >
-                    <Terminal className="w-3.5 h-3.5" /> LIVE CONSOLE FEED
-                  </button>
-                  <button
-                    onClick={() => { handleClickSound(); setActiveTab("draft"); }}
-                    onMouseEnter={handleHoverSound}
-                    className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${
-                      activeTab === "draft"
-                        ? "text-kiwi border-kiwi"
-                        : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
-                    }`}
-                  >
-                    <FileCode2 className="w-3.5 h-3.5" /> COMPILED REPORT
-                  </button>
-                </div>
-
-                {/* Tab Output Rendering */}
-                {activeTab === "terminal" ? (
-                  <AgentTerminal events={socket.events} />
-                ) : (
-                  <MarkdownOutput content={socket.finalOutput} />
-                )}
-              </div>
+                    {/* Preset Use Case Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+                      {PRESET_USE_CASES.map((preset, index) => {
+                        const IconComponent = preset.icon;
+                        return (
+                          <div
+                            key={index}
+                            onClick={() => {
+                              handleClickSound();
+                              setTaskInput(preset.prompt);
+                            }}
+                            onMouseEnter={handleHoverSound}
+                            className="p-3 bg-slate-200/20 hover:bg-slate-300/30 dark:bg-slate-900/35 dark:hover:bg-slate-900/70 border border-slate-300 hover:border-slate-400 dark:border-slate-900 dark:hover:border-kiwi/30 rounded-xl flex flex-col gap-2 transition-all duration-200 cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="p-1 rounded-lg bg-slate-300/30 dark:bg-black/40 text-slate-700 dark:text-slate-400 group-hover:text-kiwi dark:group-hover:bg-kiwi/15 dark:group-hover:text-kiwi transition-all">
+                                <IconComponent className="w-3.5 h-3.5" />
+                              </div>
+                              <span className="text-[10px] font-bold tracking-wider text-slate-800 dark:text-slate-300 font-mono uppercase group-hover:text-kiwi transition-colors">
+                                {preset.title}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-600 dark:text-slate-500 line-clamp-2 leading-relaxed">
+                              {preset.prompt}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-between border-t border-slate-200 dark:border-slate-900/60 p-4 bg-slate-50/50 dark:bg-black/30">
+                    <div className="text-[9px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-mono">
+                      <Lock className="w-3.5 h-3.5 text-kiwi" /> Powered by Groq · Tavily · E2B
+                    </div>
+                    <Button
+                      type="submit"
+                      onMouseEnter={handleHoverSound}
+                      disabled={!taskInput.trim() || isSubmitting || backendHealth !== "online"}
+                      className="bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold font-mono text-[10px] tracking-widest py-2 px-5 rounded-lg flex items-center gap-1.5 transition shadow-lg shadow-kiwi/15"
+                    >
+                      Run Agents
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
             </div>
           )}
 
+          {selectedRunId && (
+            <div className="flex-1 overflow-y-auto lg:overflow-y-hidden pr-1 scrollbar-none">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-stretch h-full">
+
+                {/* Left Column: Visualizers */}
+                <div className={`lg:col-span-5 flex flex-col space-y-5 overflow-y-auto custom-scrollbar pr-1.5 h-full pt-2 ${
+                  socket.status === "running" ? "justify-start" : "justify-center"
+                }`}>
+                  <div className="shrink-0">
+                    <h3 className="text-[10px] font-mono uppercase tracking-widest text-slate-600 dark:text-slate-400 font-bold mb-2.5 flex items-center gap-1.5 shrink-0">
+                      <Crosshair className="w-3.5 h-3.5" /> Topology Network Mapping
+                    </h3>
+                    <AgentGraph currentAgent={socket.currentAgent} status={socket.status} />
+                  </div>
+
+                  {socket.status === "running" && (
+                    <div className="shrink-0 mt-1">
+                      <HumanInterrupt
+                        runId={selectedRunId}
+                        status={socket.status}
+                        onInterrupted={() => {
+                          handleClickSound();
+                          socket.setCurrentAgent("supervisor");
+                          socket.setStatus("running");
+                          fetchRuns(true);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column: Console Details */}
+                <div className="lg:col-span-7 flex flex-col space-y-4">
+
+                  {/* Tabs Selector */}
+                  <div className="flex border-b border-slate-200 dark:border-slate-900">
+                    <button
+                      onClick={() => { handleClickSound(); setActiveTab("terminal"); }}
+                      onMouseEnter={handleHoverSound}
+                      className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${activeTab === "terminal"
+                        ? "text-kiwi border-kiwi"
+                        : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                    >
+                      <Terminal className="w-3.5 h-3.5" /> LIVE CONSOLE FEED
+                    </button>
+                    <button
+                      onClick={() => { handleClickSound(); setActiveTab("draft"); }}
+                      onMouseEnter={handleHoverSound}
+                      className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${activeTab === "draft"
+                        ? "text-kiwi border-kiwi"
+                        : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                    >
+                      <FileCode2 className="w-3.5 h-3.5" /> COMPILED REPORT
+                    </button>
+                  </div>
+
+                  {/* Tab Output Rendering */}
+                  {activeTab === "terminal" ? (
+                    <AgentTerminal events={socket.events} />
+                  ) : (
+                    <MarkdownOutput content={socket.finalOutput} />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* System Footer (Docked at bottom) */}
+        <footer className="py-3 px-6 border-t border-slate-200 dark:border-slate-900/60 bg-background/95 dark:bg-black/95 backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-[9px] text-slate-500 dark:text-slate-500 font-mono select-none z-30">
+          <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 text-center sm:text-left">
+            <span>© {new Date().getFullYear()} HIVE SYSTEMS.</span>
+            <span className="hidden sm:inline text-slate-350 dark:text-slate-800">•</span>
+            <span className="text-slate-550 dark:text-slate-500">
+              Hive is a multi-agent AI system and can make mistakes. Please double-check responses.
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href="#" className="hover:text-kiwi transition-colors">PRIVACY POLICY</a>
+            <a href="#" className="hover:text-kiwi transition-colors">TERMS OF SERVICE</a>
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-kiwi transition-colors">GITHUB</a>
+          </div>
+        </footer>
       </main>
     </div>
   );

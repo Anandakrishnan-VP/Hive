@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full dark antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-200 selection:bg-kiwi/30">
+      <body className="h-full overflow-hidden flex flex-col bg-background text-foreground transition-colors duration-200 selection:bg-kiwi/30">
         {children}
         <Toaster />
       </body>

@@ -3,8 +3,9 @@ from backend.agents.state import AgentState
 from backend.config import settings
 from backend.llm import get_llm
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
 
-def supervisor(state: AgentState) -> dict:
+def supervisor(state: AgentState, config: RunnableConfig = None) -> dict:
     """Supervisor agent that orchestrates the flow of work, plans tasks, and routes to specialists."""
     if not settings.GROQ_API_KEY:
         # Fallback if key missing
@@ -44,14 +45,52 @@ def supervisor(state: AgentState) -> dict:
     agent_outputs = state.get("agent_outputs", {})
     history_str = ""
     for agent, output in agent_outputs.items():
-        if agent != "supervisor_instruction":
+        if agent not in ("supervisor_instruction", "human_feedback"):
             history_str += f"### Output from [{agent}]:\n{output[:3000]}\n\n"
+            
+    # Load the latest human steering input
+    from backend.agents.feedback_store import log_debug
+    log_debug(f"supervisor: supervisor node executing. config is: {config}")
+    human_feedback = ""
+    run_id = None
+    if config:
+        if hasattr(config, "get"):
+            run_id = config.get("configurable", {}).get("thread_id")
+        elif hasattr(config, "configurable"):
+            run_id = getattr(config, "configurable", {}).get("thread_id")
+            
+    log_debug(f"supervisor: resolved run_id is: {run_id}")
+    if run_id:
+        from backend.agents.feedback_store import retrieve_feedback
+        human_feedback = retrieve_feedback(run_id)
+            
+    if not human_feedback:
+        human_feedback = agent_outputs.get("human_feedback", "")
+    log_debug(f"supervisor: resolved human_feedback is: {human_feedback}")
+            
+    # Permanently append steering instructions to the task description so future nodes/steps remember it
+    updated_task = state.get("task", "")
+    if human_feedback:
+        if f"[Steering Adjustment]: {human_feedback}" not in updated_task:
+            updated_task = f"{updated_task}\n[Steering Adjustment]: {human_feedback}"
+            log_debug(f"supervisor: updated task description to: {updated_task}")
             
     # Include existing plan if present
     plan_str = f"Current Plan: {state.get('task_plan', [])}\n" if state.get("task_plan") else ""
     
     prompt = (
-        f"Original User Goal: {state['task']}\n\n"
+        f"Original User Goal: {updated_task}\n\n"
+    )
+    
+    if human_feedback:
+        prompt += (
+            f"### IMPORTANT: USER INTERVENTION / STEERING GUIDANCE\n"
+            f"The user has interrupted the process and provided this steering feedback:\n"
+            f"\"{human_feedback}\"\n"
+            f"You MUST adjust your plan, instructions, and next agent selection to address this guidance immediately.\n\n"
+        )
+        
+    prompt += (
         f"{plan_str}"
         f"Here is the history of work completed so far:\n"
         f"{history_str if history_str else 'No work has been done yet.'}\n\n"
@@ -85,6 +124,10 @@ def supervisor(state: AgentState) -> dict:
         updated_outputs = dict(agent_outputs)
         updated_outputs["supervisor_instruction"] = instruction
         
+        # Clear human feedback from state so it isn't processed again
+        if "human_feedback" in updated_outputs:
+            updated_outputs["human_feedback"] = ""
+        
         # If task_plan is empty or we are initializing, set the plan
         current_plan = list(state.get("task_plan", []))
         if not current_plan and task_plan:
@@ -93,6 +136,7 @@ def supervisor(state: AgentState) -> dict:
         step_count = state.get("step_count", 0) + 1
         
         return {
+            "task": updated_task,
             "current_agent": next_agent,
             "task_plan": current_plan,
             "agent_outputs": updated_outputs,
