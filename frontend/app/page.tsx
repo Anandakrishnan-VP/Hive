@@ -500,7 +500,7 @@ export default function MainPage() {
                 </h1>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${backendHealth === "online" ? "bg-kiwi animate-pulse" : backendHealth === "checking" ? "bg-amber-500" : "bg-rose-500"}`} />
-                  <span className="text-[9px] text-slate-500 capitalize font-mono">{backendHealth === "online" ? "port 8000 online" : backendHealth === "checking" ? "resolving..." : "offline"}</span>
+                  <span className="text-[9px] text-slate-500 font-mono uppercase">{backendHealth === "online" ? "system online" : backendHealth === "checking" ? "connecting..." : "system offline"}</span>
                 </div>
               </div>
             </div>
