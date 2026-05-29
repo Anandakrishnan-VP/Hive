@@ -26,7 +26,7 @@ def supervisor(state: AgentState, config: RunnableConfig = None) -> dict:
         "create a step-by-step plan and decide which specialist to call next. "
         "Specialists available:\n"
         "- researcher: finds information from the web. Use this agent first to collect data.\n"
-        "- coder: writes and executes Python code to solve numerical, logical or programming subtasks.\n"
+        "- coder: writes and executes Python code. Use this agent ONLY if the user's prompt explicitly asks to write, debug, analyze, or run programming code, or for complex math. DO NOT use for standard informational research, comparisons, or text-only reports.\n"
         "- writer: produces structured, long-form content in markdown. Use this agent after collecting research/code outputs.\n"
         "- critic: reviews the writer's draft against the original task to ensure quality.\n\n"
         "You must return ONLY a valid JSON object in this format:\n"
