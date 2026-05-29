@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useAgentSocket } from "../hooks/useAgentSocket";
 import { AgentGraph } from "../components/AgentGraph";
 import { AgentTerminal } from "../components/AgentTerminal";
@@ -879,8 +880,8 @@ export default function MainPage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="#" className="hover:text-kiwi transition-colors">PRIVACY POLICY</a>
-            <a href="#" className="hover:text-kiwi transition-colors">TERMS OF SERVICE</a>
+            <Link href="/privacy" className="hover:text-kiwi transition-colors">PRIVACY POLICY</Link>
+            <Link href="/terms" className="hover:text-kiwi transition-colors">TERMS OF SERVICE</Link>
             <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-kiwi transition-colors">GITHUB</a>
           </div>
         </footer>
