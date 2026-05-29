@@ -188,10 +188,25 @@ export default function MainPage() {
   };
 
   // 2Advanced Boot Loading Screen States
-  const [showBootLoader, setShowBootLoader] = useState(true);
-  const [bootProgress, setBootProgress] = useState(0);
+  const [showBootLoader, setShowBootLoader] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("hive_booted") !== "true";
+    }
+    return true;
+  });
+  const [bootProgress, setBootProgress] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("hive_booted") === "true" ? 100 : 0;
+    }
+    return 0;
+  });
   const [bootLogs, setBootLogs] = useState<string[]>([]);
-  const [bootFinished, setBootFinished] = useState(false);
+  const [bootFinished, setBootFinished] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("hive_booted") === "true";
+    }
+    return false;
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const socket = useAgentSocket();
@@ -247,6 +262,17 @@ export default function MainPage() {
   useEffect(() => {
     setSoundEnabled(audioManager.isEnabled());
 
+    // Fetch config values in parallel
+    checkHealth();
+    fetchRuns(true);
+
+    if (typeof window !== "undefined" && sessionStorage.getItem("hive_booted") === "true") {
+      setShowBootLoader(false);
+      setBootFinished(true);
+      setBootProgress(100);
+      return;
+    }
+
     const logsTemplate = [
       "[0.05s] BOOT_SEQUENCE: INITIALIZING GRAPH DIRECTORY...",
       "[0.35s] CLIENT_SOUNDS: ENABLING WEB AUDIO OSCILLATORS...",
@@ -282,6 +308,9 @@ export default function MainPage() {
           clearInterval(timer);
           setBootFinished(true);
           audioManager.playSuccess();
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("hive_booted", "true");
+          }
           setTimeout(() => {
             setShowBootLoader(false);
           }, 600); // Wait for exit animation
@@ -290,10 +319,6 @@ export default function MainPage() {
         return next;
       });
     }, intervalTime);
-
-    // Fetch config values in parallel
-    checkHealth();
-    fetchRuns(true);
 
     return () => clearInterval(timer);
   }, [checkHealth, fetchRuns]);
