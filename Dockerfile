@@ -20,4 +20,4 @@ COPY backend/ /app/backend/
 EXPOSE 7860
 
 # Run Gunicorn with Uvicorn workers from the root directory so absolute imports resolve correctly
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "backend.api.main:app", "--bind", "0.0.0.0:7860"]
+CMD ["gunicorn", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "backend.api.main:app", "--bind", "0.0.0.0:7860"]
