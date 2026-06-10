@@ -1,3 +1,12 @@
+---
+title: Hive
+emoji: 🐝
+colorFrom: yellow
+colorTo: gray
+sdk: docker
+app_port: 7860
+---
+
 # Hive: Multi-Agent AI System
 
 Hive is an advanced, autonomous multi-agent research and coding orchestrator built using **LangGraph**, **FastAPI**, and **Next.js 16**. It leverages a central supervisor agent to dynamically plan, route, and execute complex technical research tasks.
