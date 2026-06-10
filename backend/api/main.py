@@ -1,4 +1,10 @@
+import sys
 import asyncio
+import os
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import datetime
 import traceback
 from contextlib import asynccontextmanager
@@ -7,9 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
 from backend.db.models import init_db, TaskRun, SessionLocal
-from backend.api.routes import router, register_run_callback
+from backend.api.routes import router, register_run_callback, active_run_tasks
 from backend.api.websocket import manager
 from backend.graph.builder import graph
+from backend.api.auth import verify_token
+from jose import jwt, JWTError
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,9 +30,17 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Hive Multi-Agent System API", lifespan=lifespan)
 
 # Add CORS Middleware
+# In production, ALLOWED_ORIGINS should be a comma-separated list of allowed URLs
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_str:
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+else:
+    # Fallback: allow all in development, restrict in production
+    allowed_origins = ["*"] if settings.ENVIRONMENT != "production" else []
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,13 +49,58 @@ app.add_middleware(
 # Include routes
 app.include_router(router)
 
+from sqlalchemy import text
+from fastapi.responses import JSONResponse
+
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    health_status = {"status": "ok", "database": "unknown"}
+    try:
+        db = SessionLocal()
+        # Execute a simple query to verify connection
+        db.execute(text("SELECT 1"))
+        health_status["database"] = "connected"
+    except Exception as e:
+        health_status["status"] = "error"
+        health_status["database"] = f"unreachable: {str(e)}"
+        return JSONResponse(status_code=500, content=health_status)
+    finally:
+        db.close()
+    return health_status
 
 # WebSocket Endpoint
 @app.websocket("/ws/{run_id}")
 async def websocket_endpoint(websocket: WebSocket, run_id: str):
+    # 1. Authenticate WebSocket via token query parameter
+    token = websocket.query_params.get("token")
+    user_id = "local_dev_user"
+    
+    if settings.SUPABASE_URL or settings.SUPABASE_JWT_SECRET:
+        if not token:
+            await websocket.accept()
+            await websocket.send_json({"type": "error", "data": {"message": "Unauthorized: Missing authentication token"}})
+            await websocket.close(code=4003)
+            return
+        try:
+            user_id = verify_token(token)
+        except Exception as e:
+            await websocket.accept()
+            await websocket.send_json({"type": "error", "data": {"message": f"Unauthorized: Invalid token: {str(e)}"}})
+            await websocket.close(code=4003)
+            return
+
+    # 2. Check that the run exists and belongs to this user
+    db = SessionLocal()
+    try:
+        db_run = db.query(TaskRun).filter(TaskRun.id == run_id).first()
+        if db_run and db_run.user_id and db_run.user_id != user_id:
+            await websocket.accept()
+            await websocket.send_json({"type": "error", "data": {"message": "Forbidden: You do not own this run"}})
+            await websocket.close(code=4003)
+            return
+    finally:
+        db.close()
+
     await manager.connect(run_id, websocket)
     
     # Task to keep connection alive with ping every 30s
@@ -61,6 +123,7 @@ async def websocket_endpoint(websocket: WebSocket, run_id: str):
         manager.disconnect(run_id, websocket)
     finally:
         keep_alive_task.cancel()
+
 
 async def run_graph_task(run_id: str, task: str):
     """Background task to run the LangGraph and stream events via WebSockets."""
@@ -86,6 +149,9 @@ async def run_graph_task(run_id: str, task: str):
     db = SessionLocal()
     
     try:
+        # Register current task
+        active_run_tasks[run_id] = asyncio.current_task()
+
         # Send initial start event
         await manager.send_event(run_id, {
             "type": "agent_start",
@@ -173,6 +239,23 @@ async def run_graph_task(run_id: str, task: str):
             "step": last_delta_state.get("step_count", 0)
         })
         
+    except asyncio.CancelledError:
+        print(f"Task run {run_id} cancelled by operator.")
+        # Update DB run
+        db_run = db.query(TaskRun).filter(TaskRun.id == run_id).first()
+        if db_run:
+            db_run.status = "cancelled"
+            db_run.completed_at = datetime.datetime.utcnow()
+            db.commit()
+            
+        # Send cancelled WS event
+        await manager.send_event(run_id, {
+            "type": "cancelled",
+            "agent": "supervisor",
+            "data": {"message": "Execution cancelled by operator"},
+            "step": last_delta_state.get("step_count", 0) if 'last_delta_state' in locals() else 0
+        })
+        raise
     except Exception as e:
         print(f"Error in background graph run {run_id}: {str(e)}")
         traceback.print_exc()
@@ -192,6 +275,7 @@ async def run_graph_task(run_id: str, task: str):
             "step": last_delta_state.get("step_count", 0) if 'last_delta_state' in locals() else 0
         })
     finally:
+        active_run_tasks.pop(run_id, None)
         db.close()
 
 # Register the background execution task in routes

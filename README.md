@@ -1,6 +1,6 @@
 # Hive: Multi-Agent AI System
 
-Hive is an advanced, autonomous multi-agent research and coding orchestrator built using **LangGraph**, **FastAPI**, and **Next.js 15**. It leverages a central supervisor agent to dynamically plan, route, and execute complex technical research tasks.
+Hive is an advanced, autonomous multi-agent research and coding orchestrator built using **LangGraph**, **FastAPI**, and **Next.js 16**. It leverages a central supervisor agent to dynamically plan, route, and execute complex technical research tasks.
 
 ---
 
@@ -40,9 +40,10 @@ graph TD
 ### Prerequisites
 - Python 3.11 or 3.12
 - Node.js 18+ and npm
-- Google Gemini API Key (`gemini-2.0-flash`)
-- Tavily Search API Key
-- E2B API Key (for Coder Agent sandbox)
+- **Groq API Key** (for Supervisor, Writer, and Critic)
+- **Google Gemini API Key** (for Researcher and Coder)
+- **Tavily Search API Key** (for web research)
+- **E2B API Key** (for isolated code interpreter sandbox)
 
 ### Setup Configurations
 
@@ -57,10 +58,35 @@ graph TD
    ```bash
    cp backend/.env.example backend/.env
    ```
-   Fill in the required API keys:
-   - `GOOGLE_API_KEY`
-   - `TAVILY_API_KEY`
-   - `E2B_API_KEY`
+   Fill in the required keys in `backend/.env`:
+   * `GROQ_API_KEY`
+   * `GEMINI_API_KEY`
+   * `TAVILY_API_KEY`
+   * `E2B_API_KEY`
+   * `ENVIRONMENT` (Set to `"production"` to enable strict validation checks, or `"development"` for local runs)
+   * `ALLOWED_ORIGINS` (Optional comma-separated list of CORS-allowed origins)
+
+3. **Customize Models (Optional)**:
+   By default, Hive routes:
+   * Supervisor, Writer, and Critic -> Groq (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`)
+   * Researcher and Coder -> Google Gemini (`gemini-2.5-flash`)
+   
+   You can customize these mappings by overriding the following variables in `backend/.env`:
+   * `SUPERVISOR_MODEL` (e.g. `groq/llama-3.3-70b-versatile`)
+   * `RESEARCHER_MODEL` (e.g. `gemini/gemini-2.5-flash`)
+   * `CODER_MODEL` (e.g. `gemini/gemini-2.5-flash`)
+   * `WRITER_MODEL` (e.g. `groq/llama-3.3-70b-versatile`)
+   * `CRITIC_MODEL` (e.g. `groq/llama-3.1-8b-instant`)
+
+4. **Database Migrations**:
+   When using a PostgreSQL database (like Supabase) in development or production, apply the migrations before running:
+   ```bash
+   cd backend
+   # Set your DATABASE_URL in your terminal environment, then run:
+   alembic upgrade head
+   ```
+   *Note: For local development using SQLite, the tables are automatically initialized on startup.*
+
 
 ---
 
@@ -90,17 +116,22 @@ The frontend console will run at `http://localhost:3000`.
 
 ## 🐳 Running with Docker Compose
 
-To spin up the entire production-ready system (including **Redis** for state checkpointing and **PostgreSQL** for logging):
+To spin up the entire production-ready system locally (including Next.js frontend, FastAPI backend, and PostgreSQL database):
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 This launches:
-- **FastAPI backend** at `http://localhost:8000`
-- **Redis** checkpointer at `redis://localhost:6379/0`
-- **PostgreSQL** log database at `postgresql://localhost:5432`
+- **Next.js Frontend** at `http://localhost:3000`
+- **FastAPI Backend** at `http://localhost:8000` (mapped to internal container port `7860` for Hugging Face Spaces compatibility)
+- **PostgreSQL Database** at `postgresql://localhost:5432`
 
 ---
 
 ## 🤝 Human-in-the-Loop Steering
 Hive supports mid-run user interruptions. If an execution is running or looping, you can input a steer command from the UI (e.g., *"Also compare how they handle async execution"*). This immediately injects the feedback into the LangGraph state and instructs the Supervisor to rewrite the execution plan.
+
+---
+
+## 🗳️ Feedback Collection
+Hive collects user feedback to improve routing decisions. Registered operators can rate agent outputs directly from the compiled report tab using the 👍 and 👎 action icons.

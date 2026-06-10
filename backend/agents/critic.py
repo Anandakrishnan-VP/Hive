@@ -6,24 +6,6 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 def critic(state: AgentState) -> dict:
     """Critic agent that reviews the generated draft, gives a score, and flags quality issues."""
-    if not settings.GROQ_API_KEY:
-        agent_outputs = dict(state.get("agent_outputs", {}))
-        agent_outputs["critic"] = json.dumps({
-            "score": 0,
-            "passed": False,
-            "issues": ["Groq API key missing"],
-            "suggestion": "Set GROQ_API_KEY"
-        })
-        error_log = list(state.get("error_log", []))
-        error_log.append("GROQ_API_KEY is missing in critic.")
-        return {
-            "agent_outputs": agent_outputs,
-            "error_log": error_log,
-            "step_count": state.get("step_count", 0) + 1
-        }
-
-    # Initialize model dynamically
-    llm = get_llm(temperature=0.1)
     
     system_prompt = (
         "You are a quality reviewer. Compare the generated draft against the original task. "
@@ -58,6 +40,7 @@ def critic(state: AgentState) -> dict:
     ]
     
     try:
+        llm = get_llm(agent_name="critic", temperature=0.1)
         response = llm.invoke(messages)
         text = response.content.strip()
         

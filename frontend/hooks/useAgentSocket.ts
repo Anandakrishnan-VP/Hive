@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 export interface AgentEvent {
-  type: "agent_start" | "tool_call" | "tool_result" | "agent_end" | "complete" | "error" | "ping";
+  type: "agent_start" | "tool_call" | "tool_result" | "agent_end" | "complete" | "error" | "cancelled" | "ping";
   agent: "supervisor" | "researcher" | "coder" | "writer" | "critic";
   data: any;
   step: number;
@@ -11,7 +11,7 @@ export interface AgentEvent {
 }
 
 export function useAgentSocket() {
-  const [status, setStatus] = useState<"idle" | "running" | "complete" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "running" | "complete" | "error" | "cancelled">("idle");
   const [currentAgent, setCurrentAgent] = useState<string | null>(null);
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [finalOutput, setFinalOutput] = useState<string>("");
@@ -32,7 +32,7 @@ export function useAgentSocket() {
     }
   }, []);
 
-  const connect = useCallback((runId: string) => {
+  const connect = useCallback((runId: string, token?: string | null) => {
     disconnect();
     activeRunIdRef.current = runId;
     setStatus("running");
@@ -41,7 +41,7 @@ export function useAgentSocket() {
     setStepCount(0);
     setCurrentAgent("supervisor");
 
-    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"}/ws/${runId}`;
+    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"}/ws/${runId}${token ? `?token=${encodeURIComponent(token)}` : ""}`;
     console.log(`Connecting to WebSocket: ${wsUrl}`);
     
     const socket = new WebSocket(wsUrl);
@@ -79,6 +79,11 @@ export function useAgentSocket() {
             break;
           case "error":
             setStatus("error");
+            setCurrentAgent(null);
+            disconnect();
+            break;
+          case "cancelled":
+            setStatus("cancelled");
             setCurrentAgent(null);
             disconnect();
             break;

@@ -1,13 +1,22 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, FileText, Scale, HelpCircle, AlertTriangle } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
 export default function TermsPage() {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 dark:bg-black text-slate-100 font-sans flex flex-col justify-between selection:bg-kiwi/30 selection:text-white">
+    <div className="h-screen overflow-y-auto bg-slate-950 dark:bg-black text-slate-100 font-sans flex flex-col justify-between selection:bg-kiwi/30 selection:text-white">
       {/* Background glow effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-kiwi/5 blur-[120px]" />
@@ -17,13 +26,13 @@ export default function TermsPage() {
       {/* Header */}
       <header className="border-b border-slate-900 bg-black/40 backdrop-blur-md relative z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link 
-            href="/"
+          <button 
+            onClick={handleBack}
             className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-slate-400 hover:text-kiwi transition-colors group"
           >
             <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
             Back to Dashboard
-          </Link>
+          </button>
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-kiwi/10 rounded-lg text-kiwi border border-kiwi/20 shadow-md">
               <Logo className="w-4 h-4 text-current" hideBackgroundPath />
@@ -89,7 +98,7 @@ export default function TermsPage() {
                 2. Nature of the AI System
               </h2>
               <p>
-                Hive is a multi-agent AI system that coordinates specialized LLM-driven workers (Researcher, Coder, Writer, Critic). You acknowledge that AI agents are probabilistic systems. Outputs, recommendations, search results, and generated programming code may contain errors, omissions, or hallucinations. You are responsible for reviewing, testing, and verifying all final code and reports before use.
+                Hive is a multi-agent AI system that coordinates specialized LLM-driven workers (Researcher, Coder, Writer, Critic). You acknowledge that AI agents are probabilistic systems. Outputs, recommendations, search results, and generated programming code may contain errors, omissions, or hallucinations. You are responsible for reviewing, testing, and verifying all final code and reports before use. Hive collects user feedback to improve routing decisions.
               </p>
             </section>
 

@@ -14,24 +14,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "../hooks/useAuth";
+import { supabase } from "@/lib/supabaseClient";
+
+
 import { toast } from "sonner";
 import {
-  Play,
-  RotateCw,
-  Layers,
-  Server,
-  Cpu,
   History,
   Plus,
   Terminal,
   FileCode2,
-  Volume2,
-  VolumeX,
   Radio,
+  RotateCw,
+  Cpu,
+  ChevronRight,
   Crosshair,
   Lock,
-  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
   Trash2,
@@ -43,18 +41,24 @@ import {
   Coins,
   Bug,
   Target,
-  BookOpen
+  BookOpen,
+  Eye,
+  EyeOff,
+  ThumbsUp,
+  ThumbsDown,
+  Copy
 } from "lucide-react";
 
 interface DBRun {
   id: string;
   task: string;
-  status: "running" | "complete" | "error";
+  status: "running" | "complete" | "error" | "cancelled";
   final_output: string | null;
   step_count: number;
   created_at: string;
   completed_at: string | null;
   trace_url: string | null;
+  rating?: "up" | "down" | null;
 }
 
 // 1. Text Scrambler Effect Component
@@ -139,6 +143,88 @@ export default function MainPage() {
   const [activeTab, setActiveTab] = useState<"terminal" | "draft">("terminal");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Authentication State
+  const [authMode, setAuthMode] = useState<"login" | "signup" | "forgot">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
+  // Password Update State (in settings)
+  const [newPassword, setNewPassword] = useState("");
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
+
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword.trim() || newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+    
+    handleClickSound();
+    setPasswordUpdating(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Password updated successfully!");
+      setNewPassword("");
+      setShowChangePassword(false);
+    } catch (err: any) {
+      console.error(err);
+      audioManager.playAlert();
+      toast.error("Failed to update password", {
+        description: err.message || "An error occurred.",
+      });
+    } finally {
+      setPasswordUpdating(false);
+    }
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    if (authMode !== "forgot" && !password.trim()) return;
+
+    handleClickSound();
+    setAuthSubmitting(true);
+    try {
+      if (authMode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        toast.success("Successfully logged in!");
+      } else if (authMode === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (error) throw error;
+        toast.success("Signup successful! Operator registered.");
+      } else if (authMode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}`,
+        });
+        if (error) throw error;
+        toast.success("Password reset email sent! Please check your inbox.");
+        setAuthMode("login");
+      }
+    } catch (err: any) {
+      console.error(err);
+      audioManager.playAlert();
+      toast.error("Authentication failed", {
+        description: err.message || "Please check your credentials and try again.",
+      });
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
   // Audio Mute State
   const [soundEnabled, setSoundEnabled] = useState(true);
 
@@ -188,29 +274,51 @@ export default function MainPage() {
   };
 
   // 2Advanced Boot Loading Screen States
-  const [showBootLoader, setShowBootLoader] = useState(() => {
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("hive_booted") !== "true";
-    }
-    return true;
-  });
-  const [bootProgress, setBootProgress] = useState(() => {
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("hive_booted") === "true" ? 100 : 0;
-    }
-    return 0;
-  });
+  const [showBootLoader, setShowBootLoader] = useState(true);
+  const [bootProgress, setBootProgress] = useState(0);
   const [bootLogs, setBootLogs] = useState<string[]>([]);
-  const [bootFinished, setBootFinished] = useState(() => {
-    if (typeof window !== "undefined") {
-      return sessionStorage.getItem("hive_booted") === "true";
-    }
-    return false;
-  });
+  const [bootFinished, setBootFinished] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  const { user, session, loading: authLoading, logout, loginAsGuest } = useAuth();
   const socket = useAgentSocket();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+  const [rateLimited, setRateLimited] = useState(false);
+  const [rateLimitResetTime, setRateLimitResetTime] = useState<string | null>(null);
+  const [showGuestLimitModal, setShowGuestLimitModal] = useState(false);
+
+  const formatResetTime = (isoString: string | null) => {
+    if (!isoString) return "";
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return "";
+    }
+  };
+
+  const fetchRateLimitStatus = useCallback(async () => {
+    if (!session?.access_token) return;
+    try {
+      const res = await fetch(`${apiUrl}/api/rate-limit-status`, {
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRateLimited(data.rate_limited);
+        setRateLimitResetTime(data.reset_at || null);
+        // Automatically open the guest modal if they are a guest and rate limited
+        if (data.rate_limited && user?.id === "guest_user") {
+          setShowGuestLimitModal(true);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching rate limit status:", err);
+    }
+  }, [apiUrl, session, user]);
 
   // Check backend service health
   const checkHealth = useCallback(async () => {
@@ -228,8 +336,17 @@ export default function MainPage() {
 
   // Fetch runs list from DB
   const fetchRuns = useCallback(async (silently = false) => {
+    if (!session?.access_token) return;
+    if (session.access_token === "guest_token") {
+      // Guest runs are in-memory only and not fetched from the DB
+      return;
+    }
     try {
-      const res = await fetch(`${apiUrl}/api/runs`);
+      const res = await fetch(`${apiUrl}/api/runs`, {
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setRuns(data);
@@ -241,7 +358,7 @@ export default function MainPage() {
         });
       }
     }
-  }, [apiUrl]);
+  }, [apiUrl, session]);
 
   // Sound trigger helpers
   const handleHoverSound = () => {
@@ -265,6 +382,7 @@ export default function MainPage() {
     // Fetch config values in parallel
     checkHealth();
     fetchRuns(true);
+    fetchRateLimitStatus();
 
     if (typeof window !== "undefined" && sessionStorage.getItem("hive_booted") === "true") {
       setShowBootLoader(false);
@@ -321,7 +439,34 @@ export default function MainPage() {
     }, intervalTime);
 
     return () => clearInterval(timer);
-  }, [checkHealth, fetchRuns]);
+  }, [checkHealth, fetchRuns, fetchRateLimitStatus]);
+
+  useEffect(() => {
+    if (session?.access_token) {
+      fetchRateLimitStatus();
+    } else {
+      setRateLimited(false);
+      setRateLimitResetTime(null);
+    }
+  }, [session, fetchRateLimitStatus]);
+
+  // Sync selected run state with socket status updates (critical for guests/real-time updates)
+  useEffect(() => {
+    if (selectedRunId && socket.status !== "idle") {
+      setRuns((prevRuns) =>
+        prevRuns.map((r) =>
+          r.id === selectedRunId
+            ? {
+                ...r,
+                status: socket.status === "running" ? "running" : socket.status === "error" ? "error" : socket.status === "cancelled" ? "cancelled" : "complete",
+                step_count: socket.stepCount,
+                final_output: socket.finalOutput || r.final_output,
+              }
+            : r
+        )
+      );
+    }
+  }, [selectedRunId, socket.status, socket.stepCount, socket.finalOutput]);
 
   // Handle click on run history item
   const handleSelectRun = async (run: DBRun) => {
@@ -330,7 +475,7 @@ export default function MainPage() {
     socket.reset();
 
     if (run.status === "running") {
-      socket.connect(run.id);
+      socket.connect(run.id, session?.access_token);
       setActiveTab("terminal");
     } else {
       socket.setStatus(run.status);
@@ -347,18 +492,33 @@ export default function MainPage() {
   // Start new run execution
   const handleStartRun = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!taskInput.trim() || isSubmitting) return;
+    if (!taskInput.trim() || isSubmitting || rateLimited) return;
 
     handleClickSound();
     setIsSubmitting(true);
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch(`${apiUrl}/api/runs`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ task: taskInput }),
       });
 
       if (!res.ok) {
+        if (res.status === 429) {
+          const errData = await res.json();
+          const detail = errData.detail || {};
+          setRateLimited(true);
+          setRateLimitResetTime(detail.reset_at || null);
+          if (user?.id === "guest_user") {
+            setShowGuestLimitModal(true);
+          }
+          throw new Error(detail.message || "You are out of free messages");
+        }
         throw new Error("HTTP error " + res.status);
       }
 
@@ -369,15 +529,29 @@ export default function MainPage() {
         description: "Agent execution started in background.",
       });
 
+      // Append new run to list (essential for in-memory guest runs)
+      const newRun: DBRun = {
+        id: newRunId,
+        task: taskInput,
+        status: "running",
+        step_count: 0,
+        created_at: new Date().toISOString(),
+        final_output: null,
+        completed_at: null,
+        trace_url: null,
+      };
+      setRuns((prev) => [newRun, ...prev]);
+
       setTaskInput("");
       setSelectedRunId(newRunId);
 
       // Connect to WS immediately to listen to events
-      socket.connect(newRunId);
+      socket.connect(newRunId, session?.access_token);
       setActiveTab("terminal");
 
       // Refresh list immediately
       await fetchRuns(true);
+      fetchRateLimitStatus();
     } catch (err: any) {
       console.error(err);
       audioManager.playAlert();
@@ -410,13 +584,20 @@ export default function MainPage() {
     }
 
     try {
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch(`${apiUrl}/api/runs/${runId}`, {
         method: "DELETE",
+        headers
       });
       if (!res.ok) {
         throw new Error("HTTP error " + res.status);
       }
       toast.success("Task deleted successfully");
+      fetchRateLimitStatus();
     } catch (err: any) {
       console.error(err);
       audioManager.playAlert();
@@ -424,6 +605,76 @@ export default function MainPage() {
       toast.error("Failed to delete task", {
         description: err.message || "An error occurred while deleting the task run.",
       });
+    }
+  };
+
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelRun = async () => {
+    if (!selectedRunId || isCancelling) return;
+    handleClickSound();
+    setIsCancelling(true);
+    try {
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch(`${apiUrl}/api/runs/${selectedRunId}/cancel`, {
+        method: "POST",
+        headers
+      });
+      if (res.ok) {
+        toast.success("Execution stopped by operator");
+        setRuns((prev) =>
+          prev.map((r) => (r.id === selectedRunId ? { ...r, status: "cancelled" } : r))
+        );
+        socket.setStatus("cancelled");
+      } else {
+        const data = await res.json();
+        throw new Error(data.detail || "Failed to cancel run");
+      }
+    } catch (err: any) {
+      console.error(err);
+      audioManager.playAlert();
+      toast.error("Failed to cancel run", {
+        description: err.message
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const handleVote = async (rating: "up" | "down") => {
+    if (!selectedRunId) return;
+    handleClickSound();
+    
+    // Optimistically update local state
+    setRuns((prev) =>
+      prev.map((r) => (r.id === selectedRunId ? { ...r, rating } : r))
+    );
+    
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+      
+      const res = await fetch(`${apiUrl}/api/runs/${selectedRunId}/feedback`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ rating }),
+      });
+      
+      if (res.ok) {
+        toast.success("Thank you for your feedback!", {
+          description: "Feedback saved to improve future model routing decisions."
+        });
+      } else {
+        throw new Error("HTTP error " + res.status);
+      }
+    } catch (err: any) {
+      console.error("Error submitting feedback:", err);
+      toast.error("Failed to save feedback");
     }
   };
 
@@ -494,6 +745,156 @@ export default function MainPage() {
                 <span>LOCALE: AP_SYS_v2.5</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white font-mono gap-4 select-none">
+        <div className="absolute inset-0 hud-grid opacity-15 pointer-events-none z-0" />
+        <div className="absolute inset-0 hud-scanline pointer-events-none z-1" />
+        <Logo className="w-28 h-auto text-kiwi animate-pulse z-10" />
+        <div className="text-xs text-kiwi tracking-widest animate-pulse z-10">AUTHENTICATING...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background dark:bg-black p-4 relative font-mono text-xs select-none">
+        <div className="absolute inset-0 hud-grid opacity-[0.03] dark:opacity-10 pointer-events-none" />
+        <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-kiwi/5 to-transparent animate-sweep-bar pointer-events-none z-10" />
+        
+        <div className="w-full max-w-md p-6 bg-card/60 dark:bg-black/40 border border-slate-350 dark:border-slate-900 rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden glow-border-kiwi z-20">
+          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-kiwi/40 to-transparent" />
+          
+          <div className="flex flex-col items-center mb-6">
+            <Logo className="w-24 h-auto text-kiwi mb-4" />
+            <h2 className="text-sm font-bold tracking-widest text-slate-900 dark:text-white uppercase">
+              <ScrambledText 
+                text={authMode === "login" ? "HIVE CONSOLE LOGIN" : authMode === "signup" ? "HIVE REGISTRATION" : "RECOVER CREDENTIALS"} 
+                key={authMode} 
+              />
+            </h2>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+              {authMode === "login" 
+                ? "Enter your email and password to log in" 
+                : authMode === "signup" 
+                  ? "Register a new email and password" 
+                  : "Enter your email to request a reset link"
+              }
+            </p>
+          </div>
+
+          <form onSubmit={handleAuthSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400">Email Address</label>
+              <input
+                type="email"
+                required
+                disabled={authSubmitting}
+                placeholder="operator@hive.sys"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-850 rounded-lg text-slate-900 dark:text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-kiwi focus:border-kiwi font-mono"
+              />
+            </div>
+
+            {authMode !== "forgot" && (
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400">Password</label>
+                  {authMode === "login" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleClickSound();
+                        setAuthMode("forgot");
+                      }}
+                      className="text-[9px] text-kiwi hover:underline uppercase tracking-wider"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    disabled={authSubmitting}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-3 pr-10 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-850 rounded-lg text-slate-900 dark:text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-kiwi focus:border-kiwi font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleClickSound();
+                      setShowPassword(!showPassword);
+                    }}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-400"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={authSubmitting}
+              className="w-full bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold text-xs py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-kiwi/15 mt-2"
+            >
+              {authSubmitting ? (
+                <span className="animate-pulse">PROCESSING...</span>
+              ) : (
+                <span>{authMode === "login" ? "INITIALIZE CONSOLE" : authMode === "signup" ? "CREATE OPERATOR" : "SEND RESET EMAIL"}</span>
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-5 text-center border-t border-slate-200 dark:border-slate-900 pt-4 flex flex-col gap-2">
+            {authMode === "forgot" ? (
+              <button
+                type="button"
+                onClick={() => {
+                  handleClickSound();
+                  setAuthMode("login");
+                }}
+                className="text-[10px] text-kiwi hover:underline tracking-wider uppercase"
+              >
+                Back to Log In
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  handleClickSound();
+                  setAuthMode(authMode === "login" ? "signup" : "login");
+                }}
+                className="text-[10px] text-kiwi hover:underline tracking-wider uppercase font-bold"
+              >
+                {authMode === "login" ? "Create operator credentials" : "Existing operator? Log In"}
+              </button>
+            )}
+            <Separator className="my-1 bg-slate-200 dark:bg-slate-900/50" />
+            <button
+              type="button"
+              onClick={() => {
+                handleClickSound();
+                loginAsGuest();
+              }}
+              className="text-[10px] text-slate-500 hover:text-slate-950 dark:hover:text-kiwi hover:underline tracking-wider uppercase font-bold"
+            >
+              Continue as Guest
+            </button>
           </div>
         </div>
       </div>
@@ -597,7 +998,9 @@ export default function MainPage() {
                           ? "text-kiwi bg-kiwi/10"
                           : run.status === "error"
                             ? "bg-rose-600 text-white dark:bg-rose-950/20 dark:text-rose-400"
-                            : "text-tangy bg-tangy/10 animate-pulse"
+                            : run.status === "cancelled"
+                              ? "bg-slate-200 text-slate-800 dark:bg-slate-900/60 dark:text-slate-400 border border-slate-350 dark:border-slate-800"
+                              : "text-tangy bg-tangy/10 animate-pulse"
                           }`}
                       >
                         {run.status}
@@ -727,6 +1130,91 @@ export default function MainPage() {
                       )}
                     </Button>
                   </div>
+
+                  {/* Log Out Operator */}
+                  <div className="border-t border-slate-200 dark:border-slate-900 pt-3 flex flex-col gap-2">
+                    <div className="text-[9px] text-slate-500 dark:text-slate-500 font-mono truncate">
+                      OPERATOR: {user?.email} {user?.id === "guest_user" && "(GUEST)"}
+                    </div>
+
+                    {user?.id !== "guest_user" && (
+                      showChangePassword ? (
+                        <form onSubmit={handleUpdatePassword} className="flex flex-col gap-2">
+                          <div className="relative">
+                            <input
+                              type={showNewPassword ? "text" : "password"}
+                              required
+                              disabled={passwordUpdating}
+                              placeholder="New Password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className="w-full pl-2 pr-8 py-1 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-850 rounded-lg text-slate-900 dark:text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-kiwi focus:border-kiwi font-mono text-[10px]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleClickSound();
+                                setShowNewPassword(!showNewPassword);
+                              }}
+                              className="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-500 hover:text-slate-400"
+                            >
+                              {showNewPassword ? (
+                                <EyeOff className="w-3.5 h-3.5" />
+                              ) : (
+                                <Eye className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setShowChangePassword(false);
+                                setShowNewPassword(false);
+                              }}
+                              className="h-6 flex-1 text-[9px] rounded-lg"
+                            >
+                              CANCEL
+                            </Button>
+                            <Button
+                              type="submit"
+                              size="sm"
+                              disabled={passwordUpdating}
+                              className="h-6 flex-1 bg-kiwi hover:bg-kiwi/90 text-slate-950 text-[9px] font-bold rounded-lg"
+                            >
+                              {passwordUpdating ? "UPDATING..." : "SAVE"}
+                            </Button>
+                          </div>
+                        </form>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            handleClickSound();
+                            setShowChangePassword(true);
+                          }}
+                          className="h-7 w-full text-[10px] rounded-lg border-slate-200 dark:border-slate-850 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                        >
+                          CHANGE PASSWORD
+                        </Button>
+                      )
+                    )}
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        handleClickSound();
+                        logout();
+                      }}
+                      className="h-7 w-full text-[10px] rounded-lg border-rose-250 hover:border-rose-450 dark:border-rose-950/40 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                    >
+                      LOG OUT CONSOLE
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -752,10 +1240,34 @@ export default function MainPage() {
                 </CardHeader>
                 <form onSubmit={handleStartRun} className="flex flex-col gap-3">
                   <CardContent className="space-y-4">
+                    {rateLimited && (
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-tangy/15 border border-tangy/30 text-[10px] font-mono text-tangy animate-[pulse_3s_infinite] backdrop-blur-md">
+                        <div className="flex items-center gap-2">
+                          <Radio className="w-3.5 h-3.5 text-tangy animate-pulse flex-shrink-0" />
+                          <span>
+                            You are out of free <span className="underline decoration-tangy decoration-1 underline-offset-2">messages</span> until {formatResetTime(rateLimitResetTime)}
+                          </span>
+                        </div>
+                        {user?.id === "guest_user" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleClickSound();
+                              logout();
+                            }}
+                            className="bg-white hover:bg-slate-250 text-black text-[9px] font-bold tracking-wider px-3 py-1 rounded transition-all font-mono uppercase flex-shrink-0"
+                          >
+                            Login
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     <Textarea
                       placeholder='e.g. "Research the top AI frameworks in 2026 and write a comparison with code examples"'
                       value={taskInput}
                       onChange={(e) => setTaskInput(e.target.value)}
+                      disabled={rateLimited}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           if (e.ctrlKey || e.shiftKey) {
@@ -764,7 +1276,7 @@ export default function MainPage() {
                           } else {
                             // Plain Enter submits the form
                             e.preventDefault();
-                            if (taskInput.trim() && !isSubmitting && backendHealth === "online") {
+                            if (taskInput.trim() && !isSubmitting && backendHealth === "online" && !rateLimited) {
                               const form = e.currentTarget.form;
                               if (form) {
                                 form.requestSubmit();
@@ -774,7 +1286,7 @@ export default function MainPage() {
                         }
                       }}
                       required
-                      className="min-h-[110px] bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-xs font-mono text-slate-800 dark:text-slate-300 placeholder:text-slate-500 dark:placeholder:text-slate-600 focus-visible:ring-kiwi rounded-xl"
+                      className="min-h-[110px] bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-850 text-xs font-mono text-slate-800 dark:text-slate-300 placeholder:text-slate-550 dark:placeholder:text-slate-655 focus-visible:ring-kiwi rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     />
 
                     {/* Preset Use Case Cards */}
@@ -785,21 +1297,38 @@ export default function MainPage() {
                           <div
                             key={index}
                             onClick={() => {
+                              if (rateLimited) return;
                               handleClickSound();
                               setTaskInput(preset.prompt);
                             }}
-                            onMouseEnter={handleHoverSound}
-                            className="p-3 bg-slate-200/20 hover:bg-slate-300/30 dark:bg-slate-900/35 dark:hover:bg-slate-900/70 border border-slate-300 hover:border-slate-400 dark:border-slate-900 dark:hover:border-kiwi/30 rounded-xl flex flex-col gap-2 transition-all duration-200 cursor-pointer group"
+                            onMouseEnter={() => {
+                              if (!rateLimited) handleHoverSound();
+                            }}
+                            className={`p-3 border rounded-xl flex flex-col gap-2 transition-all duration-200 ${
+                              rateLimited
+                                ? "opacity-40 cursor-not-allowed border-slate-300 dark:border-slate-900 bg-slate-200/5 dark:bg-slate-900/10"
+                                : "bg-slate-200/20 hover:bg-slate-300/30 dark:bg-slate-900/35 dark:hover:bg-slate-900/70 border-slate-300 hover:border-slate-400 dark:border-slate-900 dark:hover:border-kiwi/30 cursor-pointer group"
+                            }`}
                           >
                             <div className="flex items-center gap-2">
-                              <div className="p-1 rounded-lg bg-slate-300/30 dark:bg-black/40 text-slate-700 dark:text-slate-400 group-hover:text-kiwi dark:group-hover:bg-kiwi/15 dark:group-hover:text-kiwi transition-all">
+                              <div className={`p-1 rounded-lg transition-all ${
+                                rateLimited 
+                                  ? "bg-slate-200/5 dark:bg-black/20 text-slate-500" 
+                                  : "bg-slate-300/30 dark:bg-black/40 text-slate-700 dark:text-slate-400 group-hover:text-kiwi dark:group-hover:bg-kiwi/15 dark:group-hover:text-kiwi"
+                              }`}>
                                 <IconComponent className="w-3.5 h-3.5" />
                               </div>
-                              <span className="text-[10px] font-bold tracking-wider text-slate-800 dark:text-slate-300 font-mono uppercase group-hover:text-kiwi transition-colors">
+                              <span className={`text-[10px] font-bold tracking-wider font-mono uppercase transition-colors ${
+                                rateLimited 
+                                  ? "text-slate-500" 
+                                  : "text-slate-800 dark:text-slate-300 group-hover:text-kiwi"
+                              }`}>
                                 {preset.title}
                               </span>
                             </div>
-                            <p className="text-[10px] text-slate-600 dark:text-slate-500 line-clamp-2 leading-relaxed">
+                            <p className={`text-[10px] line-clamp-2 leading-relaxed transition-colors ${
+                              rateLimited ? "text-slate-550 dark:text-slate-600" : "text-slate-600 dark:text-slate-500"
+                            }`}>
                               {preset.prompt}
                             </p>
                           </div>
@@ -809,13 +1338,13 @@ export default function MainPage() {
                   </CardContent>
                   <CardFooter className="flex justify-between border-t border-slate-200 dark:border-slate-900/60 p-4 bg-slate-50/50 dark:bg-black/30">
                     <div className="text-[9px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-mono">
-                      <Lock className="w-3.5 h-3.5 text-kiwi" /> Powered by Groq · Tavily · E2B
+                      <Lock className="w-3.5 h-3.5 text-kiwi" /> Powered by Groq · Gemini · Tavily · E2B
                     </div>
                     <Button
                       type="submit"
                       onMouseEnter={handleHoverSound}
-                      disabled={!taskInput.trim() || isSubmitting || backendHealth !== "online"}
-                      className="bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold font-mono text-[10px] tracking-widest py-2 px-5 rounded-lg flex items-center gap-1.5 transition shadow-lg shadow-kiwi/15"
+                      disabled={!taskInput.trim() || isSubmitting || backendHealth !== "online" || rateLimited}
+                      className="bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold font-mono text-[10px] tracking-widest py-2 px-5 rounded-lg flex items-center gap-1.5 transition shadow-lg shadow-kiwi/15 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Run Agents
                     </Button>
@@ -859,35 +1388,125 @@ export default function MainPage() {
                 {/* Right Column: Console Details */}
                 <div className="lg:col-span-7 flex flex-col space-y-4">
 
-                  {/* Tabs Selector */}
-                  <div className="flex border-b border-slate-200 dark:border-slate-900">
-                    <button
-                      onClick={() => { handleClickSound(); setActiveTab("terminal"); }}
-                      onMouseEnter={handleHoverSound}
-                      className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${activeTab === "terminal"
-                        ? "text-kiwi border-kiwi"
-                        : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
-                        }`}
-                    >
-                      <Terminal className="w-3.5 h-3.5" /> LIVE CONSOLE FEED
-                    </button>
-                    <button
-                      onClick={() => { handleClickSound(); setActiveTab("draft"); }}
-                      onMouseEnter={handleHoverSound}
-                      className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${activeTab === "draft"
-                        ? "text-kiwi border-kiwi"
-                        : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
-                        }`}
-                    >
-                      <FileCode2 className="w-3.5 h-3.5" /> COMPILED REPORT
-                    </button>
+                  {/* Tabs Selector & Stop Run Action */}
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-900">
+                    <div className="flex">
+                      <button
+                        onClick={() => { handleClickSound(); setActiveTab("terminal"); }}
+                        onMouseEnter={handleHoverSound}
+                        className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${activeTab === "terminal"
+                          ? "text-kiwi border-kiwi"
+                          : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
+                          }`}
+                      >
+                        <Terminal className="w-3.5 h-3.5" /> LIVE CONSOLE FEED
+                      </button>
+                      <button
+                        onClick={() => { handleClickSound(); setActiveTab("draft"); }}
+                        onMouseEnter={handleHoverSound}
+                        className={`pb-2.5 px-4 font-bold text-[10px] tracking-widest transition-all border-b-2 flex items-center gap-1.5 font-mono uppercase ${activeTab === "draft"
+                          ? "text-kiwi border-kiwi"
+                          : "text-slate-600 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-white"
+                          }`}
+                      >
+                        <FileCode2 className="w-3.5 h-3.5" /> COMPILED REPORT
+                      </button>
+                    </div>
+
+                    {socket.status === "running" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCancelRun}
+                        disabled={isCancelling}
+                        className="h-7 px-3 mr-2 mb-2 text-[9px] font-mono font-bold tracking-wider text-rose-500 border-rose-950/20 hover:bg-rose-950/10 hover:border-rose-500 rounded-lg flex items-center gap-1"
+                      >
+                        <svg className="w-3 h-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.36 18.36A9 9 0 015.64 5.64m12.72 12.72A9 9 0 005.64 5.64m12.72 12.72L5.64 5.64" />
+                        </svg>
+                        {isCancelling ? "CANCELLING..." : "STOP RUN"}
+                      </Button>
+                    )}
                   </div>
 
                   {/* Tab Output Rendering */}
                   {activeTab === "terminal" ? (
                     <AgentTerminal events={socket.events} />
                   ) : (
-                    <MarkdownOutput content={socket.finalOutput} />
+                    <div className="flex flex-col justify-between h-[460px]">
+                      <div className="flex-1 min-h-0">
+                        <MarkdownOutput content={socket.finalOutput} className="h-full" />
+                      </div>
+                      
+                      {/* Actions Bar (Copy, Feedback, Rerun) */}
+                      {(selectedRun?.status === "complete" || socket.status === "complete") && (
+                        <div className="mt-4 p-3 bg-slate-900/40 border border-slate-350 dark:border-slate-900 rounded-xl flex items-center justify-between font-mono text-[10px] backdrop-blur-md shrink-0">
+                          <span className="text-slate-700 dark:text-slate-400 font-bold uppercase tracking-wider">
+                            Feedback & Actions
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {/* Copy button */}
+                            <button
+                              onClick={() => {
+                                handleClickSound();
+                                navigator.clipboard.writeText(socket.finalOutput || selectedRun?.final_output || "");
+                                toast.success("Copied report to clipboard");
+                              }}
+                              className="h-8 w-8 rounded-lg bg-slate-200/50 dark:bg-black/35 border border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 text-slate-750 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center justify-center"
+                              title="Copy Report"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+
+                            {/* Thumbs Up button (Only for logged-in operators) */}
+                            {user?.id !== "guest_user" && (
+                              <button
+                                onClick={() => handleVote("up")}
+                                className={`h-8 w-8 rounded-lg border transition flex items-center justify-center ${
+                                  selectedRun?.rating === "up"
+                                    ? "bg-kiwi/15 border-kiwi text-kiwi shadow-md shadow-kiwi/10"
+                                    : "bg-slate-200/50 dark:bg-black/35 border-slate-300 dark:border-slate-800 hover:border-kiwi/40 dark:hover:border-kiwi/30 text-slate-750 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                }`}
+                                title="Was this helpful?"
+                              >
+                                <ThumbsUp className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {/* Thumbs Down button (Only for logged-in operators) */}
+                            {user?.id !== "guest_user" && (
+                              <button
+                                onClick={() => handleVote("down")}
+                                className={`h-8 w-8 rounded-lg border transition flex items-center justify-center ${
+                                  selectedRun?.rating === "down"
+                                    ? "bg-rose-500/15 border-rose-500 text-rose-500 shadow-md shadow-rose-500/10"
+                                    : "bg-slate-200/50 dark:bg-black/35 border-slate-300 dark:border-slate-800 hover:border-rose-500/40 dark:hover:border-rose-500/30 text-slate-750 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-450"
+                                }`}
+                                title="Was this unhelpful?"
+                              >
+                                <ThumbsDown className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {/* Rerun/Refresh button */}
+                            <button
+                              onClick={() => {
+                                handleClickSound();
+                                setTaskInput(selectedRun?.task || "");
+                                setSelectedRunId(null);
+                                socket.reset();
+                                setActiveTab("terminal");
+                                toast.info("Task prompt loaded for rerun");
+                              }}
+                              className="h-8 w-8 rounded-lg bg-slate-200/50 dark:bg-black/35 border border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 text-slate-750 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition flex items-center justify-center"
+                              title="Rerun Task"
+                            >
+                              <RotateCw className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -911,6 +1530,108 @@ export default function MainPage() {
           </div>
         </footer>
       </main>
+
+      {/* Guest Rate Limit Modal */}
+      {showGuestLimitModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl w-[550px] max-w-full shadow-2xl relative overflow-hidden backdrop-blur-xl animate-[in_0.2s_ease-out]">
+            {/* Header / Accent Bar */}
+            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-tangy to-transparent" />
+            
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                handleClickSound();
+                setShowGuestLimitModal(false);
+              }}
+              className="absolute top-4 right-4 text-slate-450 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="p-6 md:p-8 space-y-6">
+              {/* Title & Description */}
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold tracking-tight text-white font-mono uppercase flex items-center gap-2">
+                  <Radio className="w-5 h-5 text-tangy animate-pulse" /> Login to keep chatting
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed font-mono">
+                  You hit your 2-query message limit. It resets at <span className="text-tangy font-bold">{formatResetTime(rateLimitResetTime)}</span>, or you can login for more runs and history.
+                </p>
+              </div>
+
+              {/* Feature Cards Grid (Inspired by Claude's modal) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Save Execution History */}
+                <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
+                  <div className="flex items-center gap-2 text-kiwi font-bold text-[10px] tracking-wider font-mono uppercase">
+                    <History className="w-3.5 h-3.5" /> Save History
+                  </div>
+                  <p className="text-[10px] text-slate-450 leading-relaxed">
+                    Review and search previous runs, logs, and outputs at any time.
+                  </p>
+                </div>
+
+                {/* Unlimited runs */}
+                <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
+                  <div className="flex items-center gap-2 text-kiwi font-bold text-[10px] tracking-wider font-mono uppercase">
+                    <Cpu className="w-3.5 h-3.5" /> Unlimited Runs
+                  </div>
+                  <p className="text-[10px] text-slate-450 leading-relaxed">
+                    Deploy research, coder, and critic agents with higher limits.
+                  </p>
+                </div>
+
+                {/* Persistent settings */}
+                <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
+                  <div className="flex items-center gap-2 text-kiwi font-bold text-[10px] tracking-wider font-mono uppercase">
+                    <Settings className="w-3.5 h-3.5" /> System Control
+                  </div>
+                  <p className="text-[10px] text-slate-450 leading-relaxed">
+                    Set a secure operator password and customize system preferences.
+                  </p>
+                </div>
+
+                {/* Real-time sync */}
+                <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
+                  <div className="flex items-center gap-2 text-kiwi font-bold text-[10px] tracking-wider font-mono uppercase">
+                    <GitCompare className="w-3.5 h-3.5" /> Core Sync
+                  </div>
+                  <p className="text-[10px] text-slate-450 leading-relaxed">
+                    Persist runs securely to your PostgreSQL database.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    handleClickSound();
+                    setShowGuestLimitModal(false);
+                  }}
+                  className="text-xs font-mono font-bold tracking-wider text-slate-400 hover:text-white"
+                >
+                  Not now
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleClickSound();
+                    setShowGuestLimitModal(false);
+                    logout(); // Trigger logout to return to Login Card
+                  }}
+                  className="bg-kiwi hover:bg-kiwi/90 text-slate-950 font-bold font-mono text-xs tracking-wider px-5 py-2 rounded-lg"
+                >
+                  Login
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,14 +5,14 @@ langchain-community
 langsmith
 fastapi
 uvicorn[standard]
-redis
 psycopg2-binary
 sqlalchemy
 alembic
 pydantic-settings
 tavily-python
 e2b-code-interpreter
-faiss-cpu
+langchain-google-genai
+gunicorn
 python-dotenv
 httpx
-langgraph-checkpoint-redis
+python-jose[cryptography]

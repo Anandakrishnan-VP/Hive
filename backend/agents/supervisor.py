@@ -7,19 +7,7 @@ from langchain_core.runnables import RunnableConfig
 
 def supervisor(state: AgentState, config: RunnableConfig = None) -> dict:
     """Supervisor agent that orchestrates the flow of work, plans tasks, and routes to specialists."""
-    if not settings.GROQ_API_KEY:
-        # Fallback if key missing
-        agent_outputs = dict(state.get("agent_outputs", {}))
-        error_log = list(state.get("error_log", []))
-        error_log.append("GROQ_API_KEY is missing in supervisor.")
-        return {
-            "current_agent": "END",
-            "error_log": error_log,
-            "step_count": state.get("step_count", 0) + 1
-        }
 
-    # Initialize model dynamically
-    llm = get_llm(temperature=0.1)
     
     system_prompt = (
         "You are an orchestrator (Supervisor) for a multi-agent system. Given a user task, "
@@ -103,6 +91,7 @@ def supervisor(state: AgentState, config: RunnableConfig = None) -> dict:
     ]
     
     try:
+        llm = get_llm(agent_name="supervisor", temperature=0.1)
         response = llm.invoke(messages)
         text = response.content.strip()
         

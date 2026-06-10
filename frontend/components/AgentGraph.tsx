@@ -5,7 +5,7 @@ import { Terminal, Shield, Search, FileCode, CheckSquare, RefreshCw } from "luci
 
 interface AgentGraphProps {
   currentAgent: string | null;
-  status: "idle" | "running" | "complete" | "error";
+  status: "idle" | "running" | "complete" | "error" | "cancelled";
 }
 
 interface NodeProps {
@@ -163,6 +163,8 @@ export function AgentGraph({ currentAgent, status }: AgentGraphProps) {
                 ? "bg-kiwi"
                 : status === "error"
                 ? "bg-rose-500"
+                : status === "cancelled"
+                ? "bg-slate-400 dark:bg-slate-600"
                 : "bg-slate-500"
             }`}
           />

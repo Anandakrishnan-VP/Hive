@@ -9,9 +9,10 @@ import { Check, Copy } from "lucide-react";
 
 interface MarkdownOutputProps {
   content: string;
+  className?: string;
 }
 
-export function MarkdownOutput({ content }: MarkdownOutputProps) {
+export function MarkdownOutput({ content, className }: MarkdownOutputProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -22,7 +23,7 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
 
   if (!content) {
     return (
-      <div className="flex flex-col items-center justify-center h-[400px] border border-dashed border-slate-800 rounded-xl bg-black/20 text-slate-500 font-sans">
+      <div className={`flex flex-col items-center justify-center border border-dashed border-slate-800 rounded-xl bg-black/20 text-slate-500 font-sans ${className || "h-[400px]"}`}>
         <p className="text-sm">No report draft has been generated yet.</p>
         <p className="text-xs text-slate-600 mt-1">Once the Writer agent completes its step, the output will appear here.</p>
       </div>
@@ -30,7 +31,7 @@ export function MarkdownOutput({ content }: MarkdownOutputProps) {
   }
 
   return (
-    <div className="relative border border-slate-800 rounded-xl bg-black/80 shadow-2xl overflow-hidden flex flex-col h-[500px]">
+    <div className={`relative border border-slate-800 rounded-xl bg-black/80 shadow-2xl overflow-hidden flex flex-col ${className || "h-[500px]"}`}>
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 select-none">
         <span className="text-xs text-slate-400 font-semibold font-mono">REPORT DRAFT PREVIEW (.md)</span>

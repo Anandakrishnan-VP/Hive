@@ -9,9 +9,20 @@ if os.path.exists(load_dotenv_path):
     load_dotenv(load_dotenv_path)
 
 class Settings(BaseSettings):
+    # App environment (development | production)
+    ENVIRONMENT: str = "development"
+
     # LLM configuration
     GROQ_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
     MODEL_NAME: str = "llama-3.3-70b-versatile"
+    
+    # Agent-specific models
+    SUPERVISOR_MODEL: str = "groq/llama-3.3-70b-versatile"
+    RESEARCHER_MODEL: str = "gemini/gemini-2.5-flash"
+    CODER_MODEL: str = "gemini/gemini-2.5-flash"
+    WRITER_MODEL: str = "groq/llama-3.3-70b-versatile"
+    CRITIC_MODEL: str = "groq/llama-3.1-8b-instant"
     
     # Tool keys
     TAVILY_API_KEY: Optional[str] = None
@@ -22,11 +33,15 @@ class Settings(BaseSettings):
     LANGSMITH_PROJECT: str = "multi-agent-system"
     
     # Databases & Checkpointing
-    REDIS_URL: Optional[str] = None
     DATABASE_URL: Optional[str] = None
+    
+    # Auth
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_JWT_SECRET: Optional[str] = None
     
     # Graph guards
     MAX_STEPS: int = 15
+
 
     # Load from .env file
     model_config = SettingsConfigDict(
@@ -44,8 +59,11 @@ if settings.LANGSMITH_API_KEY:
     os.environ["LANGCHAIN_PROJECT"] = settings.LANGSMITH_PROJECT
 
 # Compute dynamic feature flags
-USE_REDIS = bool(settings.REDIS_URL)
 USE_POSTGRES = bool(settings.DATABASE_URL)
+
+# Enforce Postgres in production
+if settings.ENVIRONMENT == "production" and not USE_POSTGRES:
+    raise ValueError("DATABASE_URL must be configured when ENVIRONMENT is set to 'production'!")
 
 # Output for SQLite fallback if not using Postgres
 SQLITE_DB_URL = "sqlite:///./hive.db"

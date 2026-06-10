@@ -24,6 +24,15 @@ class TaskRun(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     trace_url = Column(String(500), nullable=True)
+    user_id = Column(String(255), nullable=True)
+    rating = Column(String(50), nullable=True)  # "up" | "down"
+
+class GuestQuery(Base):
+    __tablename__ = "guest_queries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip_hash = Column(String(64), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 def init_db():
     """Creates database tables if they do not exist."""

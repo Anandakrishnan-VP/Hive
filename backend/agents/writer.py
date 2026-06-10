@@ -5,19 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 def writer(state: AgentState) -> dict:
     """Writer agent that compiles research and code findings into a long-form markdown blog post or report."""
-    if not settings.GROQ_API_KEY:
-        agent_outputs = dict(state.get("agent_outputs", {}))
-        agent_outputs["writer"] = "Error: Groq API key missing. Cannot generate draft."
-        error_log = list(state.get("error_log", []))
-        error_log.append("GROQ_API_KEY is missing in writer.")
-        return {
-            "agent_outputs": agent_outputs,
-            "error_log": error_log,
-            "step_count": state.get("step_count", 0) + 1
-        }
 
-    # Initialize model dynamically
-    llm = get_llm(temperature=0.7)
     
     system_prompt = (
         "You are a technical writer. Using the research and code provided, write "
@@ -46,6 +34,7 @@ def writer(state: AgentState) -> dict:
     ]
     
     try:
+        llm = get_llm(agent_name="writer", temperature=0.7)
         response = llm.invoke(messages)
         draft = response.content.strip()
         

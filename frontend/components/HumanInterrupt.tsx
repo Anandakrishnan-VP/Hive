@@ -5,6 +5,7 @@ import { MessageSquareCode, Send, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 interface HumanInterruptProps {
   runId: string | null;
@@ -15,6 +16,7 @@ interface HumanInterruptProps {
 export function HumanInterrupt({ runId, status, onInterrupted }: HumanInterruptProps) {
   const [instruction, setInstruction] = useState("");
   const [loading, setLoading] = useState(false);
+  const { session } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,11 +26,16 @@ export function HumanInterrupt({ runId, status, onInterrupted }: HumanInterruptP
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch(`${apiUrl}/api/runs/${runId}/interrupt`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ instruction }),
       });
 

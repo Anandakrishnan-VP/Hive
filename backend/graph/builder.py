@@ -1,4 +1,5 @@
 import json
+import asyncio
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from backend.agents.state import AgentState
@@ -7,7 +8,8 @@ from backend.agents.researcher import researcher
 from backend.agents.coder import coder
 from backend.agents.writer import writer
 from backend.agents.critic import critic
-from backend.config import settings, USE_REDIS
+from backend.config import settings
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 def route_next(state: AgentState) -> str:
     """Routes to the next agent based on the supervisor's decision."""
@@ -73,6 +75,52 @@ def critic_gate(state: AgentState, config: RunnableConfig = None) -> str:
     
     return END
 
+from backend.config import settings, USE_POSTGRES
+from typing import Any, Sequence, Iterator, AsyncIterator
+from langgraph.checkpoint.base import BaseCheckpointSaver, Checkpoint, CheckpointMetadata, CheckpointTuple, ChannelVersions
+
+from langgraph.checkpoint.postgres import PostgresSaver
+
+class AsyncSafePostgresSaver(PostgresSaver):
+    async def aget_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
+        return await asyncio.to_thread(self.get_tuple, config)
+
+    async def aput(
+        self,
+        config: RunnableConfig,
+        checkpoint: Checkpoint,
+        metadata: CheckpointMetadata,
+        new_versions: ChannelVersions,
+    ) -> RunnableConfig:
+        return await asyncio.to_thread(self.put, config, checkpoint, metadata, new_versions)
+
+    async def aput_writes(
+        self,
+        config: RunnableConfig,
+        writes: Sequence[tuple[str, Any]],
+        task_id: str,
+        task_path: str = "",
+    ) -> None:
+        await asyncio.to_thread(self.put_writes, config, writes, task_id, task_path)
+
+    async def adelete_thread(self, thread_id: str) -> None:
+        if hasattr(super(), "delete_thread"):
+            await asyncio.to_thread(super().delete_thread, thread_id)
+
+    async def alist(
+        self,
+        config: RunnableConfig | None,
+        *,
+        filter: dict[str, Any] | None = None,
+        before: RunnableConfig | None = None,
+        limit: int | None = None,
+    ) -> AsyncIterator[CheckpointTuple]:
+        items = await asyncio.to_thread(
+            lambda: list(self.list(config, filter=filter, before=before, limit=limit))
+        )
+        for item in items:
+            yield item
+
 def compile_graph():
     """Assembles the state graph with nodes, edges, conditional routes, and checkpointers."""
     builder = StateGraph(AgentState)
@@ -116,16 +164,27 @@ def compile_graph():
         }
     )
     
-    # Configure checkpointing: Redis for production/Docker, MemorySaver for local dev
-    if USE_REDIS:
+    # Configure checkpointing: Postgres (Supabase) if available, Redis as secondary fallback, MemorySaver for local dev
+    if USE_POSTGRES:
         try:
-            from langgraph.checkpoint.redis import RedisSaver
-            saver = RedisSaver.from_conn_string(settings.REDIS_URL)
+            print("Using PostgreSQL (Supabase) for checkpoint saver.")
+            from psycopg_pool import ConnectionPool
+            from psycopg.rows import dict_row
+            pool = ConnectionPool(
+                conninfo=settings.DATABASE_URL,
+                kwargs={"autocommit": True, "prepare_threshold": None, "row_factory": dict_row},
+                open=False
+            )
+            pool.open()
+            saver = AsyncSafePostgresSaver(conn=pool)
+            saver.setup()
             return builder.compile(checkpointer=saver)
         except Exception as e:
-            print(f"Redis checkpointer failed to initialize: {e}. Falling back to MemorySaver.")
+            print(f"PostgreSQL checkpointer failed to initialize: {e}. Falling back to MemorySaver.")
             return builder.compile(checkpointer=MemorySaver())
     else:
         return builder.compile(checkpointer=MemorySaver())
 
 graph = compile_graph()
+
+
