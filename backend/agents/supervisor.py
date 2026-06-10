@@ -109,6 +109,9 @@ def supervisor(state: AgentState, config: RunnableConfig = None) -> dict:
         task_plan = data.get("task_plan", state.get("task_plan", []))
         instruction = data.get("instruction", "")
         
+        print(f"[SUPERVISOR] Raw LLM Response: {text}")
+        print(f"[SUPERVISOR] Decision: next_agent={next_agent}, instruction='{instruction}', plan={task_plan}")
+        
         # Update supervisor instruction in agent_outputs so workers can read it
         updated_outputs = dict(agent_outputs)
         updated_outputs["supervisor_instruction"] = instruction
@@ -133,6 +136,10 @@ def supervisor(state: AgentState, config: RunnableConfig = None) -> dict:
         }
         
     except Exception as e:
+        print(f"[SUPERVISOR ERROR] Failed to make/parse decision: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
         error_log = list(state.get("error_log", []))
         error_log.append(f"Supervisor failed to parse decision: {str(e)}")
         # Force route to END on parsing error to prevent infinite loops
